@@ -3,6 +3,7 @@ package metrics
 import (
 	"context"
 	"crypto/tls"
+	stderr "errors"
 	"net/http"
 	"sync"
 	"time"
@@ -88,7 +89,7 @@ func (p *Plugin) Register(c prometheus.Collector) error {
 }
 
 // Serve prometheus metrics service.
-func (p *Plugin) Serve() chan error {
+func (p *Plugin) Serve() chan error { //nolint:gocyclo
 	errCh := make(chan error, 1)
 
 	// register Collected stat providers
@@ -186,7 +187,7 @@ func (p *Plugin) Serve() chan error {
 
 	go func() {
 		err := p.http.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
+		if err != nil && !stderr.Is(err, http.ErrServerClosed) {
 			errCh <- err
 			return
 		}
