@@ -9,7 +9,7 @@ require (
 	github.com/roadrunner-server/errors v1.1.1
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.20.0
-	golang.org/x/sys v0.0.0-20220128215802-99c3d69c2c27
+	golang.org/x/sys v0.0.0-20220204135822-1c1b9b1eba6a
 )
 
 require (
