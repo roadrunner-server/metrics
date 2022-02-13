@@ -8,6 +8,7 @@ require (
 	github.com/roadrunner-server/api/v2 v2.8.0-rc.6
 	github.com/roadrunner-server/errors v1.1.1
 	github.com/stretchr/testify v1.7.0
+	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/zap v1.21.0
 	golang.org/x/sys v0.0.0-20220209214540-3681064d5158
 )
@@ -24,6 +25,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect

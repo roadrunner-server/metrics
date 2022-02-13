@@ -14,13 +14,13 @@ type rpcServer struct {
 // Metric represent single metric produced by the application.
 type Metric struct {
 	// Collector name.
-	Name string
+	Name string `msgpack:"alias:name"`
 
 	// Collector value.
-	Value float64
+	Value float64 `msgpack:"alias:value"`
 
 	// Labels associated with metric. Only for vector metrics. Must be provided in a form of label values.
-	Labels []string
+	Labels []string `msgpack:"alias:labels"`
 }
 
 // Add new metric to the designated collector.
