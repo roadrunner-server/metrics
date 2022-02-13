@@ -1,9 +1,10 @@
 package metrics
 
 import (
-	"encoding/json"
 	"reflect"
 	"testing"
+
+	"github.com/goccy/go-json"
 
 	"github.com/vmihailenco/msgpack/v5"
 )
