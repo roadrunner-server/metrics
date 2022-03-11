@@ -5,12 +5,12 @@ go 1.17
 require (
 	github.com/goccy/go-json v0.9.5
 	github.com/prometheus/client_golang v1.12.1
-	github.com/roadrunner-server/api/v2 v2.10.0
+	github.com/roadrunner-server/api/v2 v2.11.0
 	github.com/roadrunner-server/errors v1.1.1
 	github.com/stretchr/testify v1.7.0
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/zap v1.21.0
-	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9
+	golang.org/x/sys v0.0.0-20220310020820-b874c991c1a5
 )
 
 require (
