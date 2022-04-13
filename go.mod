@@ -10,7 +10,7 @@ require (
 	github.com/stretchr/testify v1.7.1
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/zap v1.21.0
-	golang.org/x/sys v0.0.0-20220408201424-a24fb2fb8a0f
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad
 )
 
 require (
