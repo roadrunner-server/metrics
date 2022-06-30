@@ -167,11 +167,11 @@ func (p *Plugin) Serve() chan error { //nolint:gocyclo
 	p.http = &http.Server{
 		Addr:              p.cfg.Address,
 		Handler:           promhttp.HandlerFor(p.registry, promhttp.HandlerOpts{}),
-		IdleTimeout:       time.Hour * 24,
-		ReadTimeout:       time.Minute * 60,
+		IdleTimeout:       time.Hour,
+		ReadTimeout:       time.Minute * 2,
 		MaxHeaderBytes:    maxHeaderSize,
-		ReadHeaderTimeout: time.Minute * 60,
-		WriteTimeout:      time.Minute * 60,
+		ReadHeaderTimeout: time.Minute * 2,
+		WriteTimeout:      time.Minute * 2,
 		TLSConfig: &tls.Config{
 			CurvePreferences: []tls.CurveID{
 				tls.X25519,
@@ -179,9 +179,8 @@ func (p *Plugin) Serve() chan error { //nolint:gocyclo
 				tls.CurveP384,
 				tls.CurveP521,
 			},
-			CipherSuites:             DefaultCipherSuites,
-			MinVersion:               tls.VersionTLS12,
-			PreferServerCipherSuites: true,
+			CipherSuites: DefaultCipherSuites,
+			MinVersion:   tls.VersionTLS12,
 		},
 	}
 
