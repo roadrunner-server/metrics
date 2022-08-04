@@ -9,7 +9,7 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-type unmarshal func([]byte, interface{}) error
+type unmarshal func([]byte, any) error
 
 func Test_Metric_Unmarshal(t *testing.T) {
 	tests := []struct {

@@ -104,7 +104,7 @@ func (p *Plugin) Serve() chan error { //nolint:gocyclo
 		}
 	}
 
-	p.collectors.Range(func(key, value interface{}) bool {
+	p.collectors.Range(func(key, value any) bool {
 		// key - name
 		// value - prometheus.Collector
 		c := value.(prometheus.Collector)
@@ -214,8 +214,8 @@ func (p *Plugin) Stop() error {
 }
 
 // Collects used to collect all plugins which implement metrics.StatProvider interface (and Named)
-func (p *Plugin) Collects() []interface{} {
-	return []interface{}{
+func (p *Plugin) Collects() []any {
+	return []any{
 		p.AddStatProvider,
 	}
 }
@@ -233,7 +233,7 @@ func (p *Plugin) Name() string {
 }
 
 // RPC interface satisfaction
-func (p *Plugin) RPC() interface{} {
+func (p *Plugin) RPC() any {
 	return &rpcServer{
 		svc: p,
 		log: p.log,

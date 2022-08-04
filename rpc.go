@@ -165,10 +165,13 @@ func (rpc *rpcServer) Observe(m *Metric, ok *bool) error {
 
 // Declare is used to register new collector in prometheus
 // THE TYPES ARE:
-// 	NamedCollector -> Collector with the name
-// 	bool -> RPC reply value
+//
+//	NamedCollector -> Collector with the name
+//	bool -> RPC reply value
+//
 // RETURNS:
-// 	error
+//
+//	error
 func (rpc *rpcServer) Declare(nc *NamedCollector, ok *bool) error {
 	const op = errors.Op("metrics_plugin_declare")
 	rpc.log.Info("declaring new metric", zap.String("name", nc.Name), zap.Any("type", nc.Type), zap.String("namespace", nc.Namespace))
