@@ -10,7 +10,7 @@ require (
 	github.com/stretchr/testify v1.8.0
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/zap v1.22.0
-	golang.org/x/sys v0.0.0-20220808155132-1c4a2a72c664
+	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab
 )
 
 require (
@@ -24,7 +24,7 @@ require (
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
