@@ -9,8 +9,8 @@ require (
 	github.com/roadrunner-server/errors v1.2.0
 	github.com/stretchr/testify v1.8.0
 	github.com/vmihailenco/msgpack/v5 v5.3.5
-	go.uber.org/zap v1.22.0
-	golang.org/x/sys v0.0.0-20220818161305-2296e01440c6
+	go.uber.org/zap v1.23.0
+	golang.org/x/sys v0.0.0-20220823224334-20c2bfdbfe24
 )
 
 require (
