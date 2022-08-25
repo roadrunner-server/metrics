@@ -190,6 +190,8 @@ github.com/prometheus/procfs v0.8.0 h1:ODq8ZFEaYeCaZOJlZZdJA2AbQR98dSHSM1KW/You5
 github.com/prometheus/procfs v0.8.0/go.mod h1:z7EfXMXOkbkqb9IINtpCn86r/to3BnA0uaxHdg830/4=
 github.com/roadrunner-server/api/v2 v2.21.1 h1:PZp8sSrg0b+wVp+EVffEdH4HYyoVtnHX9WJCA3VsoTA=
 github.com/roadrunner-server/api/v2 v2.21.1/go.mod h1:GfXe+LhT14URGTU5rwFDKET74yMwR7au5Ik88HBwgY8=
+github.com/roadrunner-server/api/v2 v2.21.2 h1:wpRVWHUgatVYQAp5tHU2HhwYzFnocriABjy3IhUK6oA=
+github.com/roadrunner-server/api/v2 v2.21.2/go.mod h1:nivK+IP32XQw7cRqP6xRfkmsC1Rp5pZxsts1ZxjR95U=
 github.com/roadrunner-server/errors v1.2.0 h1:qBmNXt8Iex9QnYTjCkbJKsBZu2EtYkQCM06GUDcQBbI=
 github.com/roadrunner-server/errors v1.2.0/go.mod h1:z0ECxZp/dDa5RahtMcy4mBIavVxiZ9vwE5kByl7kFtY=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
