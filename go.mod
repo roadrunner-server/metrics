@@ -10,7 +10,7 @@ require (
 	github.com/stretchr/testify v1.8.0
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/zap v1.23.0
-	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8
+	golang.org/x/sys v0.0.0-20220926163933-8cfa568d3c25
 )
 
 require (
@@ -18,7 +18,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
