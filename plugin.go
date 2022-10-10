@@ -11,8 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/roadrunner-server/api/v2/plugins/config"
-	"github.com/roadrunner-server/api/v2/plugins/metrics"
 	"github.com/roadrunner-server/errors"
 	"go.uber.org/zap"
 	"golang.org/x/sys/cpu"
@@ -35,11 +33,24 @@ type Plugin struct {
 	registry   *prometheus.Registry
 
 	// prometheus Collectors
-	statProviders []metrics.StatProvider
+	statProviders []StatProvider
+}
+
+type Configurer interface {
+	// UnmarshalKey takes a single key and unmarshal it into a Struct.
+	UnmarshalKey(name string, out any) error
+
+	// Has checks if config section exists.
+	Has(name string) bool
+}
+
+// StatProvider used to collect all plugins which might report to the prometheus
+type StatProvider interface {
+	MetricsCollector() []prometheus.Collector
 }
 
 // Init service.
-func (p *Plugin) Init(cfg config.Configurer, log *zap.Logger) error {
+func (p *Plugin) Init(cfg Configurer, log *zap.Logger) error {
 	const op = errors.Op("metrics_plugin_init")
 	if !cfg.Has(PluginName) {
 		return errors.E(op, errors.Disabled)
@@ -78,7 +89,7 @@ func (p *Plugin) Init(cfg config.Configurer, log *zap.Logger) error {
 		p.collectors.Store(k, v)
 	}
 
-	p.statProviders = make([]metrics.StatProvider, 0, 2)
+	p.statProviders = make([]StatProvider, 0, 2)
 
 	return nil
 }
@@ -221,7 +232,7 @@ func (p *Plugin) Collects() []any {
 }
 
 // AddStatProvider adds a metrics provider
-func (p *Plugin) AddStatProvider(stat metrics.StatProvider) error {
+func (p *Plugin) AddStatProvider(stat StatProvider) error {
 	p.statProviders = append(p.statProviders, stat)
 
 	return nil
