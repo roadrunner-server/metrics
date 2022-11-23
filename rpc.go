@@ -6,8 +6,8 @@ import (
 	"go.uber.org/zap"
 )
 
-type rpcServer struct {
-	svc *Plugin
+type rpc struct {
+	p   *Plugin
 	log *zap.Logger
 }
 
@@ -24,12 +24,12 @@ type Metric struct {
 }
 
 // Add new metric to the designated collector.
-func (rpc *rpcServer) Add(m *Metric, ok *bool) error {
+func (r *rpc) Add(m *Metric, ok *bool) error {
 	const op = errors.Op("metrics_plugin_add")
-	rpc.log.Info("adding metric", zap.String("name", m.Name), zap.Float64("value", m.Value), zap.Strings("labels", m.Labels))
-	c, exist := rpc.svc.collectors.Load(m.Name)
+	r.log.Debug("adding metric", zap.String("name", m.Name), zap.Float64("value", m.Value), zap.Strings("labels", m.Labels))
+	c, exist := r.p.collectors.Load(m.Name)
 	if !exist {
-		rpc.log.Error("undefined collector", zap.String("collector", m.Name))
+		r.log.Error("undefined collector", zap.String("collector", m.Name))
 		return errors.E(op, errors.Errorf("undefined collector %s, try first Declare the desired collector", m.Name))
 	}
 
@@ -39,13 +39,13 @@ func (rpc *rpcServer) Add(m *Metric, ok *bool) error {
 
 	case *prometheus.GaugeVec:
 		if len(m.Labels) == 0 {
-			rpc.log.Error("required labels for collector", zap.String("collector", m.Name))
+			r.log.Error("required labels for collector", zap.String("collector", m.Name))
 			return errors.E(op, errors.Errorf("required labels for collector %s", m.Name))
 		}
 
 		gauge, err := c.GetMetricWithLabelValues(m.Labels...)
 		if err != nil {
-			rpc.log.Error("failed to get metrics with label values", zap.String("collector", m.Name), zap.Strings("labels", m.Labels))
+			r.log.Error("failed to get metrics with label values", zap.String("collector", m.Name), zap.Strings("labels", m.Labels))
 			return errors.E(op, err)
 		}
 		gauge.Add(m.Value)
@@ -59,7 +59,7 @@ func (rpc *rpcServer) Add(m *Metric, ok *bool) error {
 
 		gauge, err := c.GetMetricWithLabelValues(m.Labels...)
 		if err != nil {
-			rpc.log.Error("failed to get metrics with label values", zap.String("collector", m.Name), zap.Strings("labels", m.Labels))
+			r.log.Error("failed to get metrics with label values", zap.String("collector", m.Name), zap.Strings("labels", m.Labels))
 			return errors.E(op, err)
 		}
 		gauge.Add(m.Value)
@@ -68,19 +68,19 @@ func (rpc *rpcServer) Add(m *Metric, ok *bool) error {
 		return errors.E(op, errors.Errorf("collector %s does not support method `Add`", m.Name))
 	}
 
-	// RPC, set ok to true as return value. Need by rpc.Call reply argument
+	// RPC, set ok to true as return value. Need by r.Call reply argument
 	*ok = true
-	rpc.log.Info("metric successfully added", zap.String("name", m.Name), zap.Strings("labels", m.Labels), zap.Float64("value", m.Value))
+	r.log.Debug("metric successfully added", zap.String("name", m.Name), zap.Strings("labels", m.Labels), zap.Float64("value", m.Value))
 	return nil
 }
 
 // Sub subtract the value from the specific metric (gauge only).
-func (rpc *rpcServer) Sub(m *Metric, ok *bool) error {
+func (r *rpc) Sub(m *Metric, ok *bool) error {
 	const op = errors.Op("metrics_plugin_sub")
-	rpc.log.Info("subtracting value from metric", zap.String("name", m.Name), zap.Float64("value", m.Value), zap.Strings("labels", m.Labels))
-	c, exist := rpc.svc.collectors.Load(m.Name)
+	r.log.Debug("subtracting value from metric", zap.String("name", m.Name), zap.Float64("value", m.Value), zap.Strings("labels", m.Labels))
+	c, exist := r.p.collectors.Load(m.Name)
 	if !exist {
-		rpc.log.Error("undefined collector", zap.String("name", m.Name), zap.Float64("value", m.Value), zap.Strings("labels", m.Labels))
+		r.log.Error("undefined collector", zap.String("name", m.Name), zap.Float64("value", m.Value), zap.Strings("labels", m.Labels))
 		return errors.E(op, errors.Errorf("undefined collector %s", m.Name))
 	}
 	if c == nil {
@@ -94,33 +94,33 @@ func (rpc *rpcServer) Sub(m *Metric, ok *bool) error {
 
 	case *prometheus.GaugeVec:
 		if len(m.Labels) == 0 {
-			rpc.log.Error("required labels for collector, but none was provided", zap.String("name", m.Name), zap.Float64("value", m.Value))
+			r.log.Error("required labels for collector, but none was provided", zap.String("name", m.Name), zap.Float64("value", m.Value))
 			return errors.E(op, errors.Errorf("required labels for collector %s", m.Name))
 		}
 
 		gauge, err := c.GetMetricWithLabelValues(m.Labels...)
 		if err != nil {
-			rpc.log.Error("failed to get metrics with label values", zap.String("collector", m.Name), zap.Strings("labels", m.Labels))
+			r.log.Error("failed to get metrics with label values", zap.String("collector", m.Name), zap.Strings("labels", m.Labels))
 			return errors.E(op, err)
 		}
 		gauge.Sub(m.Value)
 	default:
 		return errors.E(op, errors.Errorf("collector `%s` does not support method `Sub`", m.Name))
 	}
-	rpc.log.Info("subtracting operation finished successfully", zap.String("name", m.Name), zap.Strings("labels", m.Labels), zap.Float64("value", m.Value))
+	r.log.Debug("subtracting operation finished successfully", zap.String("name", m.Name), zap.Strings("labels", m.Labels), zap.Float64("value", m.Value))
 
 	*ok = true
 	return nil
 }
 
 // Observe the value (histogram and summary only).
-func (rpc *rpcServer) Observe(m *Metric, ok *bool) error {
+func (r *rpc) Observe(m *Metric, ok *bool) error {
 	const op = errors.Op("metrics_plugin_observe")
-	rpc.log.Info("observing metric", zap.String("name", m.Name), zap.Float64("value", m.Value), zap.Strings("labels", m.Labels))
+	r.log.Debug("observing metric", zap.String("name", m.Name), zap.Float64("value", m.Value), zap.Strings("labels", m.Labels))
 
-	c, exist := rpc.svc.collectors.Load(m.Name)
+	c, exist := r.p.collectors.Load(m.Name)
 	if !exist {
-		rpc.log.Error("undefined collector", zap.String("name", m.Name), zap.Float64("value", m.Value), zap.Strings("labels", m.Labels))
+		r.log.Error("undefined collector", zap.String("name", m.Name), zap.Float64("value", m.Value), zap.Strings("labels", m.Labels))
 		return errors.E(op, errors.Errorf("undefined collector %s", m.Name))
 	}
 	if c == nil {
@@ -149,7 +149,7 @@ func (rpc *rpcServer) Observe(m *Metric, ok *bool) error {
 
 		observer, err := c.GetMetricWithLabelValues(m.Labels...)
 		if err != nil {
-			rpc.log.Error("failed to get metrics with label values", zap.String("collector", m.Name), zap.Strings("labels", m.Labels))
+			r.log.Error("failed to get metrics with label values", zap.String("collector", m.Name), zap.Strings("labels", m.Labels))
 			return errors.E(op, err)
 		}
 		observer.Observe(m.Value)
@@ -157,7 +157,7 @@ func (rpc *rpcServer) Observe(m *Metric, ok *bool) error {
 		return errors.E(op, errors.Errorf("collector `%s` does not support method `Observe`", m.Name))
 	}
 
-	rpc.log.Info("observe operation finished successfully", zap.String("name", m.Name), zap.Strings("labels", m.Labels), zap.Float64("value", m.Value))
+	r.log.Debug("observe operation finished successfully", zap.String("name", m.Name), zap.Strings("labels", m.Labels), zap.Float64("value", m.Value))
 
 	*ok = true
 	return nil
@@ -172,12 +172,12 @@ func (rpc *rpcServer) Observe(m *Metric, ok *bool) error {
 // RETURNS:
 //
 //	error
-func (rpc *rpcServer) Declare(nc *NamedCollector, ok *bool) error {
+func (r *rpc) Declare(nc *NamedCollector, ok *bool) error {
 	const op = errors.Op("metrics_plugin_declare")
-	rpc.log.Info("declaring new metric", zap.String("name", nc.Name), zap.Any("type", nc.Type), zap.String("namespace", nc.Namespace))
-	_, exist := rpc.svc.collectors.Load(nc.Name)
+	r.log.Debug("declaring new metric", zap.String("name", nc.Name), zap.Any("type", nc.Type), zap.String("namespace", nc.Namespace))
+	_, exist := r.p.collectors.Load(nc.Name)
 	if exist {
-		rpc.log.Error("metric with provided name already exist", zap.String("name", nc.Name), zap.Any("type", nc.Type), zap.String("namespace", nc.Namespace))
+		r.log.Error("metric with provided name already exist", zap.String("name", nc.Name), zap.Any("type", nc.Type), zap.String("namespace", nc.Namespace))
 		return errors.E(op, errors.Errorf("tried to register existing collector with the name `%s`", nc.Name))
 	}
 
@@ -242,26 +242,50 @@ func (rpc *rpcServer) Declare(nc *NamedCollector, ok *bool) error {
 	}
 
 	// add collector to sync.Map
-	rpc.svc.collectors.Store(nc.Name, collector)
+	r.p.collectors.Store(nc.Name, collector)
 	// that method might panic, we handle it by recover
-	err := rpc.svc.Register(collector)
+	err := r.p.Register(collector)
 	if err != nil {
 		*ok = false
 		return errors.E(op, err)
 	}
 
-	rpc.log.Info("metric successfully added", zap.String("name", nc.Name), zap.Any("type", nc.Type), zap.String("namespace", nc.Namespace))
+	r.log.Debug("metric successfully added", zap.String("name", nc.Name), zap.Any("type", nc.Type), zap.String("namespace", nc.Namespace))
 
 	*ok = true
 	return nil
 }
 
-// Set the metric value (only for gaude).
-func (rpc *rpcServer) Set(m *Metric, ok *bool) (err error) {
-	const op = errors.Op("metrics_plugin_set")
-	rpc.log.Info("observing metric", zap.String("name", m.Name), zap.Float64("value", m.Value), zap.Strings("labels", m.Labels))
+// Unregister removes collector from the prometheus registry
+func (r *rpc) Unregister(name string, ok *bool) error {
+	const op = errors.Op("metrics_plugin_unregister")
 
-	c, exist := rpc.svc.collectors.Load(m.Name)
+	r.log.Debug("unregistering collector", zap.String("name", name))
+
+	c, exist := r.p.collectors.LoadAndDelete(name)
+	if !exist || c == nil {
+		return errors.E(op, errors.Errorf("undefined collector %s", name))
+	}
+
+	if col, k := c.(prometheus.Collector); k {
+		if r.p.registry.Unregister(col) {
+			*ok = true
+			r.log.Debug("collector was successfully unregistered", zap.String("name", name))
+			return nil
+		}
+
+		r.log.Debug("collector was deleted from the RR registry but not from the prometheus collector", zap.String("name", name))
+	}
+
+	return nil
+}
+
+// Set the metric value (only for gaude).
+func (r *rpc) Set(m *Metric, ok *bool) (err error) {
+	const op = errors.Op("metrics_plugin_set")
+	r.log.Debug("observing metric", zap.String("name", m.Name), zap.Float64("value", m.Value), zap.Strings("labels", m.Labels))
+
+	c, exist := r.p.collectors.Load(m.Name)
 	if !exist {
 		return errors.E(op, errors.Errorf("undefined collector %s", m.Name))
 	}
@@ -275,13 +299,12 @@ func (rpc *rpcServer) Set(m *Metric, ok *bool) (err error) {
 
 	case *prometheus.GaugeVec:
 		if len(m.Labels) == 0 {
-			rpc.log.Error("required labels for collector", zap.String("collector", m.Name))
+			r.log.Error("required labels for collector", zap.String("collector", m.Name))
 			return errors.E(op, errors.Errorf("required labels for collector %s", m.Name))
 		}
-
 		gauge, err := c.GetMetricWithLabelValues(m.Labels...)
 		if err != nil {
-			rpc.log.Error("failed to get metrics with label values", zap.String("collector", m.Name), zap.Strings("labels", m.Labels))
+			r.log.Error("failed to get metrics with label values", zap.String("collector", m.Name), zap.Strings("labels", m.Labels))
 			return errors.E(op, err)
 		}
 		gauge.Set(m.Value)
@@ -290,7 +313,7 @@ func (rpc *rpcServer) Set(m *Metric, ok *bool) (err error) {
 		return errors.E(op, errors.Errorf("collector `%s` does not support method Set", m.Name))
 	}
 
-	rpc.log.Info("set operation finished successfully", zap.String("name", m.Name), zap.Strings("labels", m.Labels), zap.Float64("value", m.Value))
+	r.log.Debug("set operation finished successfully", zap.String("name", m.Name), zap.Strings("labels", m.Labels), zap.Float64("value", m.Value))
 
 	*ok = true
 	return nil
