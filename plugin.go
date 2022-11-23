@@ -245,8 +245,8 @@ func (p *Plugin) Name() string {
 
 // RPC interface satisfaction
 func (p *Plugin) RPC() any {
-	return &rpcServer{
-		svc: p,
+	return &rpc{
+		p:   p,
 		log: p.log,
 	}
 }
