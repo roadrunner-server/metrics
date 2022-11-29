@@ -3,7 +3,7 @@ module github.com/roadrunner-server/metrics/v3
 go 1.19
 
 require (
-	github.com/goccy/go-json v0.9.11
+	github.com/goccy/go-json v0.10.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/roadrunner-server/errors v1.2.0
 	github.com/stretchr/testify v1.8.1
