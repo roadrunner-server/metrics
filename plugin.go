@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/roadrunner-server/endure/v2/dep"
 	"github.com/roadrunner-server/errors"
 	"go.uber.org/zap"
 	"golang.org/x/sys/cpu"
@@ -39,9 +40,12 @@ type Plugin struct {
 type Configurer interface {
 	// UnmarshalKey takes a single key and unmarshal it into a Struct.
 	UnmarshalKey(name string, out any) error
-
 	// Has checks if config section exists.
 	Has(name string) bool
+}
+
+type Logger interface {
+	NamedLogger(name string) *zap.Logger
 }
 
 // StatProvider used to collect all plugins which might report to the prometheus
@@ -50,7 +54,7 @@ type StatProvider interface {
 }
 
 // Init service.
-func (p *Plugin) Init(cfg Configurer, log *zap.Logger) error {
+func (p *Plugin) Init(cfg Configurer, log Logger) error {
 	const op = errors.Op("metrics_plugin_init")
 	if !cfg.Has(PluginName) {
 		return errors.E(op, errors.Disabled)
@@ -63,8 +67,7 @@ func (p *Plugin) Init(cfg Configurer, log *zap.Logger) error {
 
 	p.cfg.InitDefaults()
 
-	p.log = new(zap.Logger)
-	*p.log = *log
+	p.log = log.NamedLogger(PluginName)
 	p.registry = prometheus.NewRegistry()
 
 	// Default
@@ -207,7 +210,7 @@ func (p *Plugin) Serve() chan error { //nolint:gocyclo
 }
 
 // Stop prometheus metrics service.
-func (p *Plugin) Stop() error {
+func (p *Plugin) Stop(context.Context) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -225,17 +228,13 @@ func (p *Plugin) Stop() error {
 }
 
 // Collects used to collect all plugins which implement metrics.StatProvider interface (and Named)
-func (p *Plugin) Collects() []any {
-	return []any{
-		p.AddStatProvider,
+func (p *Plugin) Collects() []*dep.In {
+	return []*dep.In{
+		dep.Fits(func(pp any) {
+			sp := pp.(StatProvider)
+			p.statProviders = append(p.statProviders, sp)
+		}, (*StatProvider)(nil)),
 	}
-}
-
-// AddStatProvider adds a metrics provider
-func (p *Plugin) AddStatProvider(stat StatProvider) error {
-	p.statProviders = append(p.statProviders, stat)
-
-	return nil
 }
 
 // Name returns user friendly plugin name
