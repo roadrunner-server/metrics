@@ -209,6 +209,10 @@ func (p *Plugin) Serve() chan error { //nolint:gocyclo
 	return errCh
 }
 
+func (p *Plugin) Weight() uint {
+	return 1
+}
+
 // Stop prometheus metrics service.
 func (p *Plugin) Stop(context.Context) error {
 	p.mu.Lock()
