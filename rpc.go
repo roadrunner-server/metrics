@@ -15,10 +15,8 @@ type rpc struct {
 type Metric struct {
 	// Collector name.
 	Name string `msgpack:"alias:name"`
-
 	// Collector value.
 	Value float64 `msgpack:"alias:value"`
-
 	// Labels associated with metric. Only for vector metrics. Must be provided in a form of label values.
 	Labels []string `msgpack:"alias:labels"`
 }
@@ -33,7 +31,9 @@ func (r *rpc) Add(m *Metric, ok *bool) error {
 		return errors.E(op, errors.Errorf("undefined collector %s, try first Declare the desired collector", m.Name))
 	}
 
-	switch c := c.(type) {
+	col := c.(*collector)
+
+	switch c := col.col.(type) {
 	case prometheus.Gauge:
 		c.Add(m.Value)
 
@@ -88,7 +88,9 @@ func (r *rpc) Sub(m *Metric, ok *bool) error {
 		return errors.E(op, errors.Errorf("undefined collector %s", m.Name))
 	}
 
-	switch c := c.(type) {
+	col := c.(*collector)
+
+	switch c := col.col.(type) {
 	case prometheus.Gauge:
 		c.Sub(m.Value)
 
@@ -127,7 +129,9 @@ func (r *rpc) Observe(m *Metric, ok *bool) error {
 		return errors.E(op, errors.Errorf("undefined collector %s", m.Name))
 	}
 
-	switch c := c.(type) {
+	col := c.(*collector)
+
+	switch c := col.col.(type) {
 	case *prometheus.SummaryVec:
 		if len(m.Labels) == 0 {
 			return errors.E(op, errors.Errorf("required labels for collector `%s`", m.Name))
@@ -174,6 +178,9 @@ func (r *rpc) Observe(m *Metric, ok *bool) error {
 //	error
 func (r *rpc) Declare(nc *NamedCollector, ok *bool) error {
 	const op = errors.Op("metrics_plugin_declare")
+	r.p.mu.Lock()
+	defer r.p.mu.Unlock()
+
 	r.log.Debug("declaring new metric", zap.String("name", nc.Name), zap.Any("type", nc.Type), zap.String("namespace", nc.Namespace))
 	_, exist := r.p.collectors.Load(nc.Name)
 	if exist {
@@ -181,7 +188,7 @@ func (r *rpc) Declare(nc *NamedCollector, ok *bool) error {
 		return errors.E(op, errors.Errorf("tried to register existing collector with the name `%s`", nc.Name))
 	}
 
-	var collector prometheus.Collector
+	var promCol prometheus.Collector
 	switch nc.Type {
 	case Histogram:
 		opts := prometheus.HistogramOpts{
@@ -193,9 +200,9 @@ func (r *rpc) Declare(nc *NamedCollector, ok *bool) error {
 		}
 
 		if len(nc.Labels) != 0 {
-			collector = prometheus.NewHistogramVec(opts, nc.Labels)
+			promCol = prometheus.NewHistogramVec(opts, nc.Labels)
 		} else {
-			collector = prometheus.NewHistogram(opts)
+			promCol = prometheus.NewHistogram(opts)
 		}
 	case Gauge:
 		opts := prometheus.GaugeOpts{
@@ -206,9 +213,9 @@ func (r *rpc) Declare(nc *NamedCollector, ok *bool) error {
 		}
 
 		if len(nc.Labels) != 0 {
-			collector = prometheus.NewGaugeVec(opts, nc.Labels)
+			promCol = prometheus.NewGaugeVec(opts, nc.Labels)
 		} else {
-			collector = prometheus.NewGauge(opts)
+			promCol = prometheus.NewGauge(opts)
 		}
 	case Counter:
 		opts := prometheus.CounterOpts{
@@ -219,9 +226,9 @@ func (r *rpc) Declare(nc *NamedCollector, ok *bool) error {
 		}
 
 		if len(nc.Labels) != 0 {
-			collector = prometheus.NewCounterVec(opts, nc.Labels)
+			promCol = prometheus.NewCounterVec(opts, nc.Labels)
 		} else {
-			collector = prometheus.NewCounter(opts)
+			promCol = prometheus.NewCounter(opts)
 		}
 	case Summary:
 		opts := prometheus.SummaryOpts{
@@ -232,23 +239,29 @@ func (r *rpc) Declare(nc *NamedCollector, ok *bool) error {
 		}
 
 		if len(nc.Labels) != 0 {
-			collector = prometheus.NewSummaryVec(opts, nc.Labels)
+			promCol = prometheus.NewSummaryVec(opts, nc.Labels)
 		} else {
-			collector = prometheus.NewSummary(opts)
+			promCol = prometheus.NewSummary(opts)
 		}
 
 	default:
 		return errors.E(op, errors.Errorf("unknown collector type %s", nc.Type))
 	}
 
-	// add collector to sync.Map
-	r.p.collectors.Store(nc.Name, collector)
 	// that method might panic, we handle it by recover
-	err := r.p.Register(collector)
+	err := r.p.Register(promCol)
 	if err != nil {
 		*ok = false
 		return errors.E(op, err)
 	}
+
+	col := &collector{
+		col:        promCol,
+		registered: true,
+	}
+
+	// add collector to sync.Map
+	r.p.collectors.Store(nc.Name, col)
 
 	r.log.Debug("metric successfully added", zap.String("name", nc.Name), zap.Any("type", nc.Type), zap.String("namespace", nc.Namespace))
 
@@ -267,8 +280,8 @@ func (r *rpc) Unregister(name string, ok *bool) error {
 		return errors.E(op, errors.Errorf("undefined collector %s", name))
 	}
 
-	if col, k := c.(prometheus.Collector); k {
-		if r.p.registry.Unregister(col) {
+	if col, k := c.(*collector); k {
+		if r.p.registry.Unregister(col.col) {
 			*ok = true
 			r.log.Debug("collector was successfully unregistered", zap.String("name", name))
 			return nil
@@ -293,7 +306,9 @@ func (r *rpc) Set(m *Metric, ok *bool) (err error) {
 		return errors.E(op, errors.Errorf("undefined collector %s", m.Name))
 	}
 
-	switch c := c.(type) {
+	col := c.(*collector)
+
+	switch c := col.col.(type) {
 	case prometheus.Gauge:
 		c.Set(m.Value)
 

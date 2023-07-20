@@ -30,11 +30,17 @@ type Plugin struct {
 	log        *zap.Logger
 	mu         sync.Mutex // all receivers are pointers
 	http       *http.Server
-	collectors sync.Map // all receivers are pointers
+	collectors sync.Map // name -> collector
 	registry   *prometheus.Registry
 
 	// prometheus Collectors
 	statProviders []StatProvider
+}
+
+// collector used to deduplicate registration
+type collector struct {
+	col        prometheus.Collector
+	registered bool
 }
 
 type Configurer interface {
@@ -105,6 +111,8 @@ func (p *Plugin) Register(c prometheus.Collector) error {
 // Serve prometheus metrics service.
 func (p *Plugin) Serve() chan error { //nolint:gocyclo
 	errCh := make(chan error, 1)
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	// register Collected stat providers
 	for i := 0; i < len(p.statProviders); i++ {
@@ -118,11 +126,18 @@ func (p *Plugin) Serve() chan error { //nolint:gocyclo
 		}
 	}
 
+	// range over the collectors registered via configuration
 	p.collectors.Range(func(key, value any) bool {
 		// key - name
 		// value - prometheus.Collector
-		c := value.(prometheus.Collector)
-		if err := p.registry.Register(c); err != nil {
+		c := value.(*collector)
+		// do not register already registered collectors
+		if c.registered {
+			p.log.Debug("prometheus collector was already registered, skipping")
+			return true
+		}
+
+		if err := p.registry.Register(c.col); err != nil {
 			errCh <- err
 			return false
 		}

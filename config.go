@@ -59,15 +59,15 @@ type Collector struct {
 }
 
 // register application specific metrics.
-func (c *Config) getCollectors() (map[string]prometheus.Collector, error) {
+func (c *Config) getCollectors() (map[string]*collector, error) {
 	if c.Collect == nil {
 		return nil, nil
 	}
 
-	collectors := make(map[string]prometheus.Collector)
+	collectors := make(map[string]*collector)
 
 	for name, m := range c.Collect {
-		var collector prometheus.Collector
+		var promCol prometheus.Collector
 		switch m.Type {
 		case Histogram:
 			opts := prometheus.HistogramOpts{
@@ -79,9 +79,9 @@ func (c *Config) getCollectors() (map[string]prometheus.Collector, error) {
 			}
 
 			if len(m.Labels) != 0 {
-				collector = prometheus.NewHistogramVec(opts, m.Labels)
+				promCol = prometheus.NewHistogramVec(opts, m.Labels)
 			} else {
-				collector = prometheus.NewHistogram(opts)
+				promCol = prometheus.NewHistogram(opts)
 			}
 		case Gauge:
 			opts := prometheus.GaugeOpts{
@@ -92,9 +92,9 @@ func (c *Config) getCollectors() (map[string]prometheus.Collector, error) {
 			}
 
 			if len(m.Labels) != 0 {
-				collector = prometheus.NewGaugeVec(opts, m.Labels)
+				promCol = prometheus.NewGaugeVec(opts, m.Labels)
 			} else {
-				collector = prometheus.NewGauge(opts)
+				promCol = prometheus.NewGauge(opts)
 			}
 		case Counter:
 			opts := prometheus.CounterOpts{
@@ -105,9 +105,9 @@ func (c *Config) getCollectors() (map[string]prometheus.Collector, error) {
 			}
 
 			if len(m.Labels) != 0 {
-				collector = prometheus.NewCounterVec(opts, m.Labels)
+				promCol = prometheus.NewCounterVec(opts, m.Labels)
 			} else {
-				collector = prometheus.NewCounter(opts)
+				promCol = prometheus.NewCounter(opts)
 			}
 		case Summary:
 			opts := prometheus.SummaryOpts{
@@ -119,15 +119,18 @@ func (c *Config) getCollectors() (map[string]prometheus.Collector, error) {
 			}
 
 			if len(m.Labels) != 0 {
-				collector = prometheus.NewSummaryVec(opts, m.Labels)
+				promCol = prometheus.NewSummaryVec(opts, m.Labels)
 			} else {
-				collector = prometheus.NewSummary(opts)
+				promCol = prometheus.NewSummary(opts)
 			}
 		default:
 			return nil, fmt.Errorf("invalid metric type `%s` for `%s`", m.Type, name)
 		}
 
-		collectors[name] = collector
+		collectors[name] = &collector{
+			col:        promCol,
+			registered: false,
+		}
 	}
 
 	return collectors, nil
