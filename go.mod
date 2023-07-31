@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/goccy/go-json v0.10.2
 	github.com/prometheus/client_golang v1.16.0
-	github.com/roadrunner-server/endure/v2 v2.3.0
+	github.com/roadrunner-server/endure/v2 v2.3.1
 	github.com/roadrunner-server/errors v1.2.0
 	github.com/stretchr/testify v1.8.4
 	github.com/vmihailenco/msgpack/v5 v5.3.5
