@@ -19,6 +19,10 @@ require (
 	go.uber.org/zap v1.26.0
 )
 
+replace (
+	github.com/roadrunner-server/metrics/v4 => ../
+)
+
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/caddyserver/certmagic v0.19.2 // indirect
