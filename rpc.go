@@ -11,7 +11,7 @@ type rpc struct {
 	log *zap.Logger
 }
 
-// Metric represent single metric produced by the application.
+// Metric represents a single metric produced by the application.
 type Metric struct {
 	// Collector name.
 	Name string `msgpack:"alias:name"`
@@ -84,7 +84,7 @@ func (r *rpc) Sub(m *Metric, ok *bool) error {
 		return errors.E(op, errors.Errorf("undefined collector %s", m.Name))
 	}
 	if c == nil {
-		// can it be nil ??? I guess can't
+		// can it be a nil ??? I guess can't
 		return errors.E(op, errors.Errorf("undefined collector %s", m.Name))
 	}
 
@@ -168,14 +168,6 @@ func (r *rpc) Observe(m *Metric, ok *bool) error {
 }
 
 // Declare is used to register new collector in prometheus
-// THE TYPES ARE:
-//
-//	NamedCollector -> Collector with the name
-//	bool -> RPC reply value
-//
-// RETURNS:
-//
-//	error
 func (r *rpc) Declare(nc *NamedCollector, ok *bool) error {
 	const op = errors.Op("metrics_plugin_declare")
 	r.p.mu.Lock()

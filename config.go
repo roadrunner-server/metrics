@@ -11,14 +11,13 @@ type Config struct {
 	// Address to listen
 	Address string `mapstructure:"address"`
 
-	// Collect define application specific metrics.
+	// Collect define application-specific metrics.
 	Collect map[string]Collector `mapstructure:"collect"`
 }
 
 type NamedCollector struct {
 	// Name of the collector
 	Name string `json:"name"`
-
 	// Collector structure
 	Collector `json:"collector"`
 }
@@ -40,7 +39,7 @@ const (
 	Summary CollectorType = "summary"
 )
 
-// Collector describes single application specific metric.
+// Collector describes a single application specific metric.
 type Collector struct {
 	// Namespace of the metric.
 	Namespace string `json:"namespace,omitempty"`
