@@ -19,9 +19,7 @@ require (
 	go.uber.org/zap v1.26.0
 )
 
-replace (
-	github.com/roadrunner-server/metrics/v4 => ../
-)
+replace github.com/roadrunner-server/metrics/v4 => ../
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -54,7 +52,7 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/roadrunner-server/api/v4 v4.8.0 // indirect
 	github.com/roadrunner-server/errors v1.3.0 // indirect
-	github.com/roadrunner-server/sdk/v4 v4.5.1 // indirect
+	github.com/roadrunner-server/sdk/v4 v4.5.2 // indirect
 	github.com/roadrunner-server/tcplisten v1.4.0 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/spf13/afero v1.10.0 // indirect
