@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	stderr "errors"
-	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -268,8 +267,4 @@ func (p *Plugin) RPC() any {
 		p:   p,
 		log: p.log,
 	}
-}
-
-func collectorKey(name, namespace string) string {
-	return fmt.Sprintf("%s:%s", namespace, name)
 }
