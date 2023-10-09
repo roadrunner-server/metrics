@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	stderr "errors"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -131,7 +132,7 @@ func (p *Plugin) Serve() chan error { //nolint:gocyclo
 		// key - name
 		// value - prometheus.Collector
 		c := value.(*collector)
-		// do not register already registered collectors
+		// do not register yet registered collectors
 		if c.registered {
 			p.log.Debug("prometheus collector was already registered, skipping")
 			return true
@@ -156,7 +157,7 @@ func (p *Plugin) Serve() chan error { //nolint:gocyclo
 	hasGCMAsm := hasGCMAsmAMD64 || hasGCMAsmARM64 || hasGCMAsmS390X
 
 	if hasGCMAsm {
-		// If AES-GCM hardware is provided then prioritize AES-GCM
+		// If AES-GCM hardware is provided, then prioritize AES-GCM
 		// cipher suites.
 		topCipherSuites = []uint16{
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
@@ -246,7 +247,7 @@ func (p *Plugin) Stop(context.Context) error {
 	return nil
 }
 
-// Collects used to collect all plugins which implement metrics.StatProvider interface (and Named)
+// Collects used to collect all plugins that implement metrics.StatProvider interface (and Named)
 func (p *Plugin) Collects() []*dep.In {
 	return []*dep.In{
 		dep.Fits(func(pp any) {
@@ -256,7 +257,7 @@ func (p *Plugin) Collects() []*dep.In {
 	}
 }
 
-// Name returns user friendly plugin name
+// Name returns user-friendly plugin name
 func (p *Plugin) Name() string {
 	return PluginName
 }
@@ -267,4 +268,8 @@ func (p *Plugin) RPC() any {
 		p:   p,
 		log: p.log,
 	}
+}
+
+func collectorKey(name, namespace string) string {
+	return fmt.Sprintf("%s:%s", namespace, name)
 }

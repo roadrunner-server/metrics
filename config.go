@@ -10,8 +10,7 @@ import (
 type Config struct {
 	// Address to listen
 	Address string `mapstructure:"address"`
-
-	// Collect define application-specific metrics.
+	// Collect defines application-specific metrics.
 	Collect map[string]Collector `mapstructure:"collect"`
 }
 
@@ -28,13 +27,10 @@ type CollectorType string
 const (
 	// Histogram type
 	Histogram CollectorType = "histogram"
-
 	// Gauge type
 	Gauge CollectorType = "gauge"
-
 	// Counter type
 	Counter CollectorType = "counter"
-
 	// Summary type
 	Summary CollectorType = "summary"
 )
