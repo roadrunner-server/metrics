@@ -128,6 +128,79 @@ func TestMetricsIssue571(t *testing.T) {
 	assert.NoError(t, cont.Stop())
 }
 
+func TestMetricsDeclareNamespace(t *testing.T) {
+	cont := endure.New(slog.LevelDebug)
+
+	cfg := &config.Plugin{
+		Version: "2023.3.0",
+		Prefix:  "rr",
+		Path:    "configs/.rr-metrics-namespace.yaml",
+	}
+
+	l, oLogger := mocklogger.ZapTestLogger(zap.DebugLevel)
+	err := cont.RegisterAll(
+		l,
+		cfg,
+		&metrics.Plugin{},
+		&rpcPlugin.Plugin{},
+		&server.Plugin{},
+		&prometheus.Plugin{},
+		&httpPlugin.Plugin{},
+	)
+	assert.NoError(t, err)
+
+	err = cont.Init()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ch, err := cont.Serve()
+	assert.NoError(t, err)
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case e := <-ch:
+				assert.Fail(t, "error", e.Error.Error())
+			case <-sig:
+				err = cont.Stop()
+				if err != nil {
+					assert.FailNow(t, "error", err.Error())
+				}
+				return
+			}
+		}
+	}()
+
+	time.Sleep(time.Second * 2)
+	t.Run("req1", echoHTTP("56445"))
+	t.Run("req2", echoHTTP("56445"))
+
+	time.Sleep(time.Second)
+	genericOut, err := get("http://127.0.0.1:23757/metrics")
+	assert.NoError(t, err)
+	assert.Contains(t, genericOut, `rr_http_request_duration_seconds_bucket`)
+	assert.Contains(t, genericOut, `rr_http_request_duration_seconds_sum{status="200"}`)
+	assert.Contains(t, genericOut, `rr_http_request_duration_seconds_count{status="200"}`)
+	assert.Contains(t, genericOut, `rr_http_request_total{status="200"}`)
+	assert.Contains(t, genericOut, "rr_http_workers_memory_bytes")
+	assert.Contains(t, genericOut, `state="ready"}`)
+	assert.Contains(t, genericOut, `{pid=`)
+	assert.Contains(t, genericOut, `rr_http_total_workers 1`)
+
+	close(sig)
+	wg.Wait()
+
+	require.Equal(t, 2, oLogger.FilterMessageSnippet("http log").Len())
+}
+
 func TestMetricsGaugeCollector(t *testing.T) {
 	cont := endure.New(slog.LevelDebug)
 
@@ -299,7 +372,7 @@ func TestMetricsDifferentRPCCalls(t *testing.T) {
 
 	genericOut, err = getIPV6("http://[::1]:2114/metrics")
 	assert.NoError(t, err)
-	assert.Contains(t, genericOut, `TYPE histogram_registerHistogram`)
+	assert.Contains(t, genericOut, `TYPE default_histogram_registerHistogram`)
 
 	// check buckets
 	assert.Contains(t, genericOut, `histogram_registerHistogram_bucket{le="0.1"} 0`)
@@ -352,17 +425,18 @@ func TestHTTPMetrics(t *testing.T) {
 	cont := endure.New(slog.LevelDebug)
 
 	cfg := &config.Plugin{
-		Version: "2.9.0"}
-	cfg.Prefix = "rr"
-	cfg.Path = "configs/.rr-metrics-http.yaml"
+		Version: "2023.3.0",
+		Prefix:  "rr",
+		Path:    "configs/.rr-metrics-http.yaml",
+	}
 
 	l, oLogger := mocklogger.ZapTestLogger(zap.DebugLevel)
 	err := cont.RegisterAll(
+		l,
 		cfg,
 		&metrics.Plugin{},
 		&server.Plugin{},
 		&httpPlugin.Plugin{},
-		l,
 		&prometheus.Plugin{},
 	)
 	assert.NoError(t, err)
@@ -563,7 +637,7 @@ func TestUnregister(t *testing.T) {
 	assert.Contains(t, genericOut, "test_metrics_named_collector")
 
 	time.Sleep(time.Second * 2)
-	t.Run("UnregisterMetric", unregisterMetric("test_metrics_named_collector", address))
+	t.Run("UnregisterMetric", unregisterMetric("test_metrics_named_collector@default", address))
 	genericOut, err = getIPV6("http://[::1]:2117/metrics")
 	assert.NoError(t, err)
 	assert.NotContains(t, genericOut, "test_metrics_named_collector")
@@ -585,8 +659,9 @@ func configuredCounterMetric(address string) func(t *testing.T) {
 		var ret bool
 
 		assert.NoError(t, client.Call("metrics.Add", metrics.Metric{
-			Name:  "app_metric_counter",
-			Value: 100.0,
+			Namespace: "default",
+			Name:      "app_metric_counter",
+			Value:     100.0,
 		}, &ret))
 		assert.True(t, ret)
 	}
@@ -619,9 +694,10 @@ func observeMetricNotEnoughLabels(address string) func(t *testing.T) {
 		ret = false
 
 		assert.Error(t, client.Call("metrics.Observe", metrics.Metric{
-			Name:   "observe_observeMetric",
-			Value:  100.0,
-			Labels: []string{"test"},
+			Name:      "observe_observeMetric",
+			Namespace: "default",
+			Value:     100.0,
+			Labels:    []string{"test"},
 		}, &ret))
 		assert.False(t, ret)
 	}
@@ -654,9 +730,10 @@ func observeMetric(address string) func(t *testing.T) {
 		ret = false
 
 		assert.NoError(t, client.Call("metrics.Observe", metrics.Metric{
-			Name:   "observe_observeMetric",
-			Value:  100.0,
-			Labels: []string{"test", "test2"},
+			Namespace: "default",
+			Name:      "observe_observeMetric",
+			Value:     100.0,
+			Labels:    []string{"test", "test2"},
 		}, &ret))
 		assert.True(t, ret)
 	}
@@ -690,9 +767,10 @@ func counterMetric(address string) func(t *testing.T) {
 		ret = false
 
 		assert.NoError(t, client.Call("metrics.Add", metrics.Metric{
-			Name:   "counter_CounterMetric",
-			Value:  100.0,
-			Labels: []string{"type2", "section2"},
+			Namespace: "default",
+			Name:      "counter_CounterMetric",
+			Value:     100.0,
+			Labels:    []string{"type2", "section2"},
 		}, &ret))
 		assert.True(t, ret)
 	}
@@ -711,9 +789,10 @@ func registerHistogram(address string) func(t *testing.T) {
 		nc := metrics.NamedCollector{
 			Name: "histogram_registerHistogram",
 			Collector: metrics.Collector{
-				Help:    "test_histogram",
-				Type:    metrics.Histogram,
-				Buckets: []float64{0.1, 0.2, 0.5},
+				Namespace: "default",
+				Help:      "test_histogram",
+				Type:      metrics.Histogram,
+				Buckets:   []float64{0.1, 0.2, 0.5},
 			},
 		}
 
@@ -724,9 +803,10 @@ func registerHistogram(address string) func(t *testing.T) {
 		ret = false
 
 		m := metrics.Metric{
-			Name:   "histogram_registerHistogram",
-			Value:  10000,
-			Labels: nil,
+			Namespace: "default",
+			Name:      "histogram_registerHistogram",
+			Value:     10000,
+			Labels:    nil,
 		}
 
 		err = client.Call("metrics.Add", m, &ret)
@@ -762,9 +842,10 @@ func subVector(address string) func(t *testing.T) {
 		ret = false
 
 		m := metrics.Metric{
-			Name:   "sub_gauge_subVector",
-			Value:  100000,
-			Labels: []string{"core", "first"},
+			Namespace: "default",
+			Name:      "sub_gauge_subVector",
+			Value:     100000,
+			Labels:    []string{"core", "first"},
 		}
 
 		err = client.Call("metrics.Add", m, &ret)
@@ -773,9 +854,10 @@ func subVector(address string) func(t *testing.T) {
 		ret = false
 
 		m = metrics.Metric{
-			Name:   "sub_gauge_subVector",
-			Value:  99999,
-			Labels: []string{"core", "first"},
+			Namespace: "default",
+			Name:      "sub_gauge_subVector",
+			Value:     99999,
+			Labels:    []string{"core", "first"},
 		}
 
 		err = client.Call("metrics.Sub", m, &ret)
@@ -809,8 +891,9 @@ func subMetric(address string) func(t *testing.T) {
 		ret = false
 
 		m := metrics.Metric{
-			Name:  "sub_gauge_subMetric",
-			Value: 100000,
+			Namespace: "default",
+			Name:      "sub_gauge_subMetric",
+			Value:     100000,
 		}
 
 		err = client.Call("metrics.Add", m, &ret)
@@ -819,8 +902,9 @@ func subMetric(address string) func(t *testing.T) {
 		ret = false
 
 		m = metrics.Metric{
-			Name:  "sub_gauge_subMetric",
-			Value: 99999,
+			Namespace: "default",
+			Name:      "sub_gauge_subMetric",
+			Value:     99999,
 		}
 
 		err = client.Call("metrics.Sub", m, &ret)
@@ -856,8 +940,9 @@ func setOnHistogram(address string) func(t *testing.T) {
 		ret = false
 
 		m := metrics.Metric{
-			Name:  "gauge_setOnHistogram",
-			Value: 100.0,
+			Namespace: "default",
+			Name:      "gauge_setOnHistogram",
+			Value:     100.0,
 		}
 
 		err = client.Call("metrics.Set", m, &ret) // expected 2 label values but got 1 in []string{"missing"}
@@ -893,8 +978,9 @@ func setWithoutLabels(address string) func(t *testing.T) {
 		ret = false
 
 		m := metrics.Metric{
-			Name:  "gauge_setWithoutLabels",
-			Value: 100.0,
+			Namespace: "default",
+			Name:      "gauge_setWithoutLabels",
+			Value:     100.0,
 		}
 
 		err = client.Call("metrics.Set", m, &ret) // expected 2 label values but got 1 in []string{"missing"}
@@ -930,9 +1016,10 @@ func missingSection(address string) func(t *testing.T) {
 		ret = false
 
 		m := metrics.Metric{
-			Name:   "gauge_missing_section_collector",
-			Value:  100.0,
-			Labels: []string{"missing"},
+			Namespace: "default",
+			Name:      "gauge_missing_section_collector",
+			Value:     100.0,
+			Labels:    []string{"missing"},
 		}
 
 		err = client.Call("metrics.Set", m, &ret) // expected 2 label values but got 1 in []string{"missing"}
@@ -968,9 +1055,10 @@ func vectorMetric(address string) func(t *testing.T) {
 		ret = false
 
 		m := metrics.Metric{
-			Name:   "gauge_2_collector",
-			Value:  100.0,
-			Labels: []string{"core", "first"},
+			Namespace: "default",
+			Name:      "gauge_2_collector",
+			Value:     100.0,
+			Labels:    []string{"core", "first"},
 		}
 
 		err = client.Call("metrics.Set", m, &ret)
@@ -1004,8 +1092,9 @@ func setMetric(address string) func(t *testing.T) {
 		ret = false
 
 		m := metrics.Metric{
-			Name:  "user_gauge_collector",
-			Value: 100.0,
+			Namespace: "default",
+			Name:      "user_gauge_collector",
+			Value:     100.0,
 		}
 
 		err = client.Call("metrics.Set", m, &ret)
@@ -1025,9 +1114,10 @@ func addMetricsTest(address string) func(t *testing.T) {
 		var ret bool
 
 		m := metrics.Metric{
-			Name:   "test_metrics_named_collector",
-			Value:  10000,
-			Labels: nil,
+			Name:      "test_metrics_named_collector",
+			Namespace: "default",
+			Value:     10000,
+			Labels:    nil,
 		}
 
 		err = client.Call("metrics.Add", m, &ret)

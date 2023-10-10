@@ -1,0 +1,20 @@
+version: '3'
+
+rpc:
+  listen: tcp://127.0.0.1:6071
+
+server:
+  command: "php php_test_files/metrics-namespaces.php"
+
+http:
+  address: "0.0.0.0:56445"
+  middleware:
+    - "http_metrics"
+  pool:
+    num_workers: 1
+
+logs:
+  level: debug
+
+metrics:
+  address: 0.0.0.0:23757

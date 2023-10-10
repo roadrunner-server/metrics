@@ -15,6 +15,7 @@ metrics:
     app_metric_counter:
       type: counter
       help: "Custom application counter."
+
 logs:
   mode: development
-  level: error
+  level: debug

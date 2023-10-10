@@ -46,7 +46,7 @@ type collector struct {
 type Configurer interface {
 	// UnmarshalKey takes a single key and unmarshal it into a Struct.
 	UnmarshalKey(name string, out any) error
-	// Has checks if config section exists.
+	// Has checks if a config section exists.
 	Has(name string) bool
 }
 
@@ -54,7 +54,7 @@ type Logger interface {
 	NamedLogger(name string) *zap.Logger
 }
 
-// StatProvider used to collect all plugins which might report to the prometheus
+// StatProvider used to collect all plugins that might report to the prometheus
 type StatProvider interface {
 	MetricsCollector() []prometheus.Collector
 }
@@ -131,7 +131,7 @@ func (p *Plugin) Serve() chan error { //nolint:gocyclo
 		// key - name
 		// value - prometheus.Collector
 		c := value.(*collector)
-		// do not register already registered collectors
+		// do not register yet registered collectors
 		if c.registered {
 			p.log.Debug("prometheus collector was already registered, skipping")
 			return true
@@ -246,7 +246,7 @@ func (p *Plugin) Stop(context.Context) error {
 	return nil
 }
 
-// Collects used to collect all plugins which implement metrics.StatProvider interface (and Named)
+// Collects used to collect all plugins that implement metrics.StatProvider interface (and Named)
 func (p *Plugin) Collects() []*dep.In {
 	return []*dep.In{
 		dep.Fits(func(pp any) {
@@ -256,7 +256,7 @@ func (p *Plugin) Collects() []*dep.In {
 	}
 }
 
-// Name returns user friendly plugin name
+// Name returns user-friendly plugin name
 func (p *Plugin) Name() string {
 	return PluginName
 }
@@ -267,4 +267,8 @@ func (p *Plugin) RPC() any {
 		p:   p,
 		log: p.log,
 	}
+}
+
+func collectorKey(name, namespace string) string {
+	return name + "@" + namespace
 }

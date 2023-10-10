@@ -28,13 +28,10 @@ type CollectorType string
 const (
 	// Histogram type
 	Histogram CollectorType = "histogram"
-
 	// Gauge type
 	Gauge CollectorType = "gauge"
-
 	// Counter type
 	Counter CollectorType = "counter"
-
 	// Summary type
 	Summary CollectorType = "summary"
 )
@@ -123,7 +120,7 @@ func (c *Config) getCollectors() (map[string]*collector, error) {
 				promCol = prometheus.NewSummary(opts)
 			}
 		default:
-			return nil, fmt.Errorf("invalid metric type `%s` for `%s`", m.Type, name)
+			return nil, fmt.Errorf("invalid metric type: %s for name: %s", m.Type, name)
 		}
 
 		collectors[name] = &collector{
