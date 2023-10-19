@@ -6,15 +6,15 @@ toolchain go1.21.1
 
 require (
 	github.com/prometheus/client_golang v1.17.0
-	github.com/roadrunner-server/config/v4 v4.4.6
+	github.com/roadrunner-server/config/v4 v4.4.7
 	github.com/roadrunner-server/endure/v2 v2.4.3
 	github.com/roadrunner-server/goridge/v3 v3.8.1
-	github.com/roadrunner-server/http/v4 v4.4.2
-	github.com/roadrunner-server/logger/v4 v4.2.4
-	github.com/roadrunner-server/metrics/v4 v4.1.6
-	github.com/roadrunner-server/prometheus/v4 v4.1.5
-	github.com/roadrunner-server/rpc/v4 v4.2.5
-	github.com/roadrunner-server/server/v4 v4.4.2
+	github.com/roadrunner-server/http/v4 v4.4.3
+	github.com/roadrunner-server/logger/v4 v4.2.5
+	github.com/roadrunner-server/metrics/v4 v4.1.7
+	github.com/roadrunner-server/prometheus/v4 v4.1.6
+	github.com/roadrunner-server/rpc/v4 v4.2.6
+	github.com/roadrunner-server/server/v4 v4.4.3
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.26.0
 )
@@ -33,22 +33,21 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.3.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/libdns/libdns v0.2.1 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.19 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/mholt/acmez v1.2.0 // indirect
 	github.com/miekg/dns v1.1.56 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
-	github.com/prometheus/common v0.44.0 // indirect
+	github.com/prometheus/common v0.45.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/roadrunner-server/api/v4 v4.9.0 // indirect
 	github.com/roadrunner-server/errors v1.3.0 // indirect
