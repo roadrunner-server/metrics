@@ -270,5 +270,9 @@ func (p *Plugin) RPC() any {
 }
 
 func collectorKey(name, namespace string) string {
+	if namespace == "" {
+		return name
+	}
+
 	return name + "@" + namespace
 }
