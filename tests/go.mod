@@ -2,7 +2,7 @@ module tests
 
 go 1.21
 
-toolchain go1.21.4
+toolchain go1.21.5
 
 require (
 	github.com/prometheus/client_golang v1.17.0
