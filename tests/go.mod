@@ -5,16 +5,16 @@ go 1.21
 toolchain go1.22rc1
 
 require (
-	github.com/prometheus/client_golang v1.17.0
-	github.com/roadrunner-server/config/v4 v4.6.4
+	github.com/prometheus/client_golang v1.18.0
+	github.com/roadrunner-server/config/v4 v4.6.5
 	github.com/roadrunner-server/endure/v2 v2.4.3
 	github.com/roadrunner-server/goridge/v3 v3.8.1
-	github.com/roadrunner-server/http/v4 v4.4.9
-	github.com/roadrunner-server/logger/v4 v4.2.11
-	github.com/roadrunner-server/metrics/v4 v4.1.13
-	github.com/roadrunner-server/prometheus/v4 v4.1.12
-	github.com/roadrunner-server/rpc/v4 v4.2.12
-	github.com/roadrunner-server/server/v4 v4.5.4
+	github.com/roadrunner-server/http/v4 v4.4.10
+	github.com/roadrunner-server/logger/v4 v4.2.12
+	github.com/roadrunner-server/metrics/v4 v4.1.14
+	github.com/roadrunner-server/prometheus/v4 v4.1.13
+	github.com/roadrunner-server/rpc/v4 v4.2.13
+	github.com/roadrunner-server/server/v4 v4.5.5
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.26.0
 )
@@ -34,7 +34,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
-	github.com/google/pprof v0.0.0-20231212022811-ec68065c825e // indirect
+	github.com/google/pprof v0.0.0-20231229205709-960ae82b1e42 // indirect
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
@@ -58,7 +58,7 @@ require (
 	github.com/quic-go/quic-go v0.40.1 // indirect
 	github.com/roadrunner-server/api/v4 v4.10.0 // indirect
 	github.com/roadrunner-server/errors v1.3.0 // indirect
-	github.com/roadrunner-server/sdk/v4 v4.5.4 // indirect
+	github.com/roadrunner-server/sdk/v4 v4.5.5 // indirect
 	github.com/roadrunner-server/tcplisten v1.4.0 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
@@ -83,11 +83,11 @@ require (
 	go.uber.org/mock v0.4.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
-	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b // indirect
+	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
-	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/sync v0.6.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.16.1 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
