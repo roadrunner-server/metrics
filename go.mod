@@ -8,7 +8,7 @@ require (
 	github.com/goccy/go-json v0.10.2
 	github.com/prometheus/client_golang v1.18.0
 	github.com/roadrunner-server/endure/v2 v2.4.3
-	github.com/roadrunner-server/errors v1.3.0
+	github.com/roadrunner-server/errors v1.4.0
 	github.com/stretchr/testify v1.8.4
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	go.uber.org/zap v1.26.0
