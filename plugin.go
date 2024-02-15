@@ -127,7 +127,7 @@ func (p *Plugin) Serve() chan error { //nolint:gocyclo
 	}
 
 	// range over the collectors registered via configuration
-	p.collectors.Range(func(key, value any) bool {
+	p.collectors.Range(func(_, value any) bool {
 		// key - name
 		// value - prometheus.Collector
 		c := value.(*collector)
