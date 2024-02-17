@@ -1,1 +1,1 @@
-# Docs: [link](https://roadrunner.dev/docs/plugins-metrics/2.x/en)
+# Docs: [link](https://docs.roadrunner.dev/logging-and-observability/metrics)
