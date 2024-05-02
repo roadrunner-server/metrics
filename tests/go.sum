@@ -63,6 +63,7 @@ github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RR
 github.com/onsi/ginkgo/v2 v2.17.2 h1:7eMhcy3GimbsA3hEnVKdw/PQM9XN9krpKVXsZdph0/g=
 github.com/onsi/ginkgo/v2 v2.17.2/go.mod h1:nP2DPOQoNsQmsVyv5rDA8JkXQoCs6goXIvr/PRJ1eCc=
 github.com/onsi/gomega v1.33.0 h1:snPCflnZrpMsy94p4lXVEkHo12lmPnc3vY5XBbreexE=
+github.com/onsi/gomega v1.33.0/go.mod h1:+925n5YtiFsLzzafLUHzVMBpvvRAzrydIBiSIxjX3wY=
 github.com/pelletier/go-toml/v2 v2.2.2 h1:aYUidT7k73Pcl9nb2gScu7NSrKCSHIDE89b3+6Wq+LM=
 github.com/pelletier/go-toml/v2 v2.2.2/go.mod h1:1t835xjRzz80PqgE6HHgN2JOsmgYu/h4qDAS4n929Rs=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
@@ -98,8 +99,8 @@ github.com/roadrunner-server/prometheus/v4 v4.3.0 h1:NG4gInJxgrMY3PSnsNnjFb+jbmL
 github.com/roadrunner-server/prometheus/v4 v4.3.0/go.mod h1:5xYHdCK3DYopl3PMr24dW3BRLEmILoK3RMrKllISGf8=
 github.com/roadrunner-server/rpc/v4 v4.4.0 h1:O6LUBjShzGN6X4O0kj5Xi4RGFv/feXQZtzUS+qQGU6M=
 github.com/roadrunner-server/rpc/v4 v4.4.0/go.mod h1:8jkjUpcMrQ7uc8d8Gzsssxt7kmbkxyIVSHz4aCtUo4Y=
-github.com/roadrunner-server/sdk/v4 v4.7.1 h1:/QacFUa1Nsd1Z0MqNXslqGL1AxUfWLN17Zid/wKmC04=
-github.com/roadrunner-server/sdk/v4 v4.7.1/go.mod h1:Hmdwhtotu6CcE0iDP1WKLXa/uimsNbHoA3oxEYHefV0=
+github.com/roadrunner-server/sdk/v4 v4.7.2 h1:SjTzwfPqt1JhEA8o7goHf1/4eUnSC33evDBcbbeGlCQ=
+github.com/roadrunner-server/sdk/v4 v4.7.2/go.mod h1:OteLuhqeHlU+NDlOnrEegCRj0Nmm9EqrMBwO7KXWDO4=
 github.com/roadrunner-server/server/v4 v4.8.0 h1:whGVxx0Vv3fVdGSAJvrhQ1tO8zCszBR7ZxkiiSklT6w=
 github.com/roadrunner-server/server/v4 v4.8.0/go.mod h1:MHjb/g/5BXotCxMXsJq9CUcJucFax1iJMGvTIlc24BA=
 github.com/roadrunner-server/tcplisten v1.4.0 h1:yWo09zktv/CSV6VywLfw4pwNcUchgTiIrW4uIICtO5M=
