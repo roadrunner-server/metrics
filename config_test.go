@@ -95,7 +95,7 @@ func Test_Config_HydrateObjectives(t *testing.T) {
 		},
 	}
 	gotJSON, err := json.Marshal(c)
-	assert.NoError(t, err, err.Error())
+	assert.NoError(t, err)
 
 	wantJSON := `{"collect":{"objectives":{"0.1": 0.2}}}`
 	assert.Equal(t, wantJSON, gotJSON)
