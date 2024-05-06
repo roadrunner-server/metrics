@@ -15,7 +15,7 @@ func Test_Config_Hydrate_Error1(t *testing.T) {
 	f := new(bytes.Buffer)
 	f.WriteString(cfg)
 
-	err := json.Unmarshal(f.Bytes(), &c)
+	err := json.Unmarshal(f.Bytes(), c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func Test_Config_Hydrate_Error2(t *testing.T) {
 	f := new(bytes.Buffer)
 	f.WriteString(cfg)
 
-	err := json.Unmarshal(f.Bytes(), &c)
+	err := json.Unmarshal(f.Bytes(), c)
 	assert.Error(t, err)
 }
 
@@ -45,7 +45,7 @@ func Test_Config_Metrics(t *testing.T) {
 	f := new(bytes.Buffer)
 	f.WriteString(cfg)
 
-	err := json.Unmarshal(f.Bytes(), &c)
+	err := json.Unmarshal(f.Bytes(), c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func Test_Config_MetricsVector(t *testing.T) {
 	f := new(bytes.Buffer)
 	f.WriteString(cfg)
 
-	err := json.Unmarshal(f.Bytes(), &c)
+	err := json.Unmarshal(f.Bytes(), c)
 	if err != nil {
 		t.Fatal(err)
 	}
