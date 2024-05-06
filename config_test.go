@@ -85,3 +85,44 @@ func Test_Config_MetricsVector(t *testing.T) {
 	assert.IsType(t, prometheus.NewSummaryVec(prometheus.SummaryOpts{}, []string{}), m["metric3"].col)
 	assert.IsType(t, prometheus.NewHistogramVec(prometheus.HistogramOpts{}, []string{}), m["metric4"].col)
 }
+
+func Test_Config_Hydrate(t *testing.T) {
+	cfg := `{
+"address": "127.0.0.1:2112",
+"labels": {"app":"testapp", "env":"testenv"},
+"collect":{
+	"metric1":{
+		"namespace": "metric1_namespace",
+		"subsystem": "metric1_subsystem",
+		"type": "gauge",
+		"help":"metric1_help",
+		"labels":["label1_metric1", "label2_metric1"],
+		"buckets": [0.1, 0.01]
+}
+}
+}`
+	c := &Config{}
+	f := new(bytes.Buffer)
+	f.WriteString(cfg)
+
+	err := json.Unmarshal(f.Bytes(), c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantConfig := Config{
+		Address: "127.0.0.1:2112",
+		Labels:  map[string]string{"app": "testapp", "env": "testenv"},
+		Collect: map[string]Collector{
+			"metric1": {
+				Namespace: "metric1_namespace",
+				Subsystem: "metric1_subsystem",
+				Type:      "gauge",
+				Help:      "metric1_help",
+				Labels:    []string{"label1_metric1", "label2_metric1"},
+				Buckets:   []float64{0.1, 0.01},
+			},
+		},
+	}
+
+	assert.Equal(t, wantConfig, *c)
+}
