@@ -85,3 +85,18 @@ func Test_Config_MetricsVector(t *testing.T) {
 	assert.IsType(t, prometheus.NewSummaryVec(prometheus.SummaryOpts{}, []string{}), m["metric3"].col)
 	assert.IsType(t, prometheus.NewHistogramVec(prometheus.HistogramOpts{}, []string{}), m["metric4"].col)
 }
+
+func Test_Config_HydrateObjectives(t *testing.T) {
+	c := Config{
+		Collect: map[string]Collector{
+			"metric1": {
+				Objectives: map[float64]float64{0.1: 0.2},
+			},
+		},
+	}
+	gotJSON, err := json.Marshal(c)
+	assert.NoError(t, err, err.Error())
+
+	wantJSON := `{"collect":{"objectives":{"0.1": 0.2}}}`
+	assert.Equal(t, wantJSON, gotJSON)
+}
