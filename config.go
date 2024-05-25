@@ -8,8 +8,11 @@ import (
 
 // Config configures metrics service.
 type Config struct {
-	// Address to listen
+	// Address to listen.
 	Address string `mapstructure:"address"`
+	// Labels to be used in [General Metrics].
+	// [General Metrics]: https://docs.roadrunner.dev/logging-and-observability/metrics#general-metrics
+	Labels map[string]string `mapstructure:"labels"`
 	// Collect defines application-specific metrics.
 	Collect map[string]Collector `mapstructure:"collect"`
 }
