@@ -2,10 +2,12 @@ module tests
 
 go 1.22.3
 
+toolchain go1.22.4
+
 require (
 	github.com/prometheus/client_golang v1.19.1
 	github.com/roadrunner-server/config/v4 v4.9.0
-	github.com/roadrunner-server/endure/v2 v2.4.4
+	github.com/roadrunner-server/endure/v2 v2.4.5
 	github.com/roadrunner-server/goridge/v3 v3.8.2
 	github.com/roadrunner-server/http/v4 v4.7.4
 	github.com/roadrunner-server/logger/v4 v4.4.2
@@ -58,7 +60,7 @@ require (
 	github.com/roadrunner-server/errors v1.4.0 // indirect
 	github.com/roadrunner-server/sdk/v4 v4.7.2 // indirect
 	github.com/roadrunner-server/tcplisten v1.4.0 // indirect
-	github.com/sagikazarmark/locafero v0.5.0 // indirect
+	github.com/sagikazarmark/locafero v0.6.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
@@ -80,14 +82,14 @@ require (
 	go.opentelemetry.io/otel/trace v1.27.0 // indirect
 	go.uber.org/mock v0.4.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.23.0 // indirect
+	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc // indirect
-	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/mod v0.18.0 // indirect
+	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/text v0.15.0 // indirect
-	golang.org/x/tools v0.21.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
