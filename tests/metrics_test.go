@@ -20,7 +20,7 @@ import (
 	goridgeRpc "github.com/roadrunner-server/goridge/v3/pkg/rpc"
 	httpPlugin "github.com/roadrunner-server/http/v4"
 	"github.com/roadrunner-server/logger/v4"
-	"github.com/roadrunner-server/metrics/v4"
+	"github.com/roadrunner-server/metrics/v5"
 	"github.com/roadrunner-server/prometheus/v4"
 	rpcPlugin "github.com/roadrunner-server/rpc/v4"
 	"github.com/roadrunner-server/server/v4"
@@ -35,8 +35,7 @@ func TestMetricsInit(t *testing.T) {
 	cont := endure.New(slog.LevelDebug)
 
 	cfg := &config.Plugin{
-		Version: "2.9.0",
-		Prefix:  "rr",
+		Version: "2024.2.0",
 		Path:    "configs/.rr-metrics-init.yaml",
 	}
 
@@ -103,8 +102,7 @@ func TestMetricsIssue571(t *testing.T) {
 	cont := endure.New(slog.LevelDebug)
 
 	cfg := &config.Plugin{
-		Version: "2.9.0",
-		Prefix:  "rr",
+		Version: "2024.2.0",
 		Path:    "configs/.rr-issue-571.yaml",
 	}
 
@@ -132,8 +130,7 @@ func TestMetricsGaugeCollector(t *testing.T) {
 	cont := endure.New(slog.LevelDebug)
 
 	cfg := &config.Plugin{
-		Version: "2.9.0",
-		Prefix:  "rr",
+		Version: "2024.2.0",
 		Path:    "configs/.rr-metrics-gauge.yaml",
 	}
 
@@ -207,8 +204,7 @@ func TestMetricsDifferentRPCCalls(t *testing.T) {
 	cont := endure.New(slog.LevelDebug)
 
 	cfg := &config.Plugin{
-		Version: "2.9.0",
-		Prefix:  "rr",
+		Version: "2024.2.0",
 		Path:    "configs/.rr-metrics-different-rpc-calls.yaml",
 	}
 
@@ -352,9 +348,9 @@ func TestHTTPMetrics(t *testing.T) {
 	cont := endure.New(slog.LevelDebug)
 
 	cfg := &config.Plugin{
-		Version: "2.9.0"}
-	cfg.Prefix = "rr"
-	cfg.Path = "configs/.rr-metrics-http.yaml"
+		Version: "2024.2.0",
+		Path:    "configs/.rr-metrics-http.yaml",
+	}
 
 	l, oLogger := mocklogger.ZapTestLogger(zap.DebugLevel)
 	err := cont.RegisterAll(
@@ -432,8 +428,7 @@ func TestHTTPMetricsNoFreeWorkers(t *testing.T) {
 	cont := endure.New(slog.LevelDebug)
 
 	cfg := &config.Plugin{
-		Version: "2.9.0",
-		Prefix:  "rr",
+		Version: "2024.2.0",
 		Path:    "configs/.rr-http-metrics-no-free-workers.yaml",
 	}
 
@@ -502,8 +497,7 @@ func TestUnregister(t *testing.T) {
 	cont := endure.New(slog.LevelDebug)
 
 	cfg := &config.Plugin{
-		Version: "2.12.0",
-		Prefix:  "rr",
+		Version: "2024.2.0",
 		Path:    "configs/.rr-metrics-unregister.yaml",
 	}
 

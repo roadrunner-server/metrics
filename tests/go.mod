@@ -1,6 +1,6 @@
 module tests
 
-go 1.22.4
+go 1.22.5
 
 require (
 	github.com/prometheus/client_golang v1.19.1
@@ -9,7 +9,7 @@ require (
 	github.com/roadrunner-server/goridge/v3 v3.8.2
 	github.com/roadrunner-server/http/v4 v4.7.6
 	github.com/roadrunner-server/logger/v4 v4.4.4
-	github.com/roadrunner-server/metrics/v4 v4.1.18
+	github.com/roadrunner-server/metrics/v5 v5.0.0
 	github.com/roadrunner-server/prometheus/v4 v4.3.4
 	github.com/roadrunner-server/rpc/v4 v4.4.4
 	github.com/roadrunner-server/server/v4 v4.8.4
@@ -17,7 +17,7 @@ require (
 	go.uber.org/zap v1.27.0
 )
 
-replace github.com/roadrunner-server/metrics/v4 => ../
+replace github.com/roadrunner-server/metrics/v5 => ../
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
