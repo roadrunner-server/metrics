@@ -2,6 +2,8 @@ module tests
 
 go 1.22.5
 
+toolchain go1.23rc1
+
 require (
 	github.com/prometheus/client_golang v1.19.1
 	github.com/roadrunner-server/config/v5 v5.0.0
