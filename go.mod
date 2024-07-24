@@ -1,11 +1,13 @@
 module github.com/roadrunner-server/metrics/v5
 
-go 1.22.5
+go 1.22
+
+toolchain go1.22.5
 
 require (
 	github.com/goccy/go-json v0.10.3
 	github.com/prometheus/client_golang v1.19.1
-	github.com/roadrunner-server/endure/v2 v2.4.5
+	github.com/roadrunner-server/endure/v2 v2.4.6
 	github.com/roadrunner-server/errors v1.4.0
 	github.com/stretchr/testify v1.9.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
