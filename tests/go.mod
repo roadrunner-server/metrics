@@ -4,15 +4,15 @@ go 1.22.5
 
 require (
 	github.com/prometheus/client_golang v1.19.1
-	github.com/roadrunner-server/config/v5 v5.0.1
+	github.com/roadrunner-server/config/v5 v5.0.2
 	github.com/roadrunner-server/endure/v2 v2.4.6
 	github.com/roadrunner-server/goridge/v3 v3.8.3
-	github.com/roadrunner-server/http/v5 v5.0.1
-	github.com/roadrunner-server/logger/v5 v5.0.1
+	github.com/roadrunner-server/http/v5 v5.0.2
+	github.com/roadrunner-server/logger/v5 v5.0.2
 	github.com/roadrunner-server/metrics/v5 v5.0.0
 	github.com/roadrunner-server/prometheus/v5 v5.0.1
-	github.com/roadrunner-server/rpc/v5 v5.0.1
-	github.com/roadrunner-server/server/v5 v5.0.1
+	github.com/roadrunner-server/rpc/v5 v5.0.2
+	github.com/roadrunner-server/server/v5 v5.0.2
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
 )
@@ -33,7 +33,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
-	github.com/google/pprof v0.0.0-20240722153945-304e4f0156b8 // indirect
+	github.com/google/pprof v0.0.0-20240727154555-813a5fbdbec8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
@@ -47,7 +47,7 @@ require (
 	github.com/miekg/dns v1.1.61 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/onsi/ginkgo/v2 v2.19.0 // indirect
+	github.com/onsi/ginkgo/v2 v2.19.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
