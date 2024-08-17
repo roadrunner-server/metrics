@@ -1,6 +1,6 @@
 module tests
 
-go 1.22.5
+go 1.23.0
 
 require (
 	github.com/prometheus/client_golang v1.20.0
