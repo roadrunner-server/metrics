@@ -6,13 +6,13 @@ toolchain go1.23.0
 
 require (
 	github.com/goccy/go-json v0.10.3
-	github.com/prometheus/client_golang v1.20.2
-	github.com/roadrunner-server/endure/v2 v2.5.0
+	github.com/prometheus/client_golang v1.20.3
+	github.com/roadrunner-server/endure/v2 v2.6.1
 	github.com/roadrunner-server/errors v1.4.1
 	github.com/stretchr/testify v1.9.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	go.uber.org/zap v1.27.0
-	golang.org/x/sys v0.24.0
+	golang.org/x/sys v0.25.0
 )
 
 require (
@@ -23,7 +23,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.55.0 // indirect
+	github.com/prometheus/common v0.59.1 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
