@@ -18,7 +18,7 @@
       "additionalProperties": false,
       "minProperties": 1,
       "patternProperties": {
-        "^[a-zA-Z0-9._-]+$": {
+        "^[a-zA-Z_:][a-zA-Z0-9_:]*$": {
           "type": "object",
           "description": "The metrics to set up in Prometheus. See https://prometheus.io/docs/guides/go-application/ for details.",
           "properties": {
@@ -44,12 +44,12 @@
               "description": "The collector's help message."
             },
             "labels": {
-              "description": "The collector's metrics labels.",
+              "description": "The collector's metrics labels. These must be in the format supported by Prometheus. See https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels",
               "type": "array",
               "minItems": 1,
               "items": {
                 "type": "string",
-                "minLength": 1
+                "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
               }
             },
             "buckets": {
