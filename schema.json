@@ -21,8 +21,10 @@
         "^[a-zA-Z_:][a-zA-Z0-9_:]*$": {
           "type": "object",
           "description": "The metrics to set up in Prometheus. See https://prometheus.io/docs/guides/go-application/ for details.",
+          "additionalProperties": false,
           "properties": {
             "type": {
+              "description": "The metric type to collect.",
               "type": "string",
               "enum": [
                 "histogram",
@@ -51,23 +53,47 @@
                 "type": "string",
                 "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
               }
-            },
-            "buckets": {
-              "description": "The colletor's buckets for the histogram type.",
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "number"
+            }
+          },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "histogram"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "buckets": {
+                "description": "The collector's buckets for the histogram type.",
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "else": {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "summary"
+                }
               }
             },
-            "objectives": {
-              "description": "The collector's objectives for the summary type.",
-              "type": "object",
-              "minProperties": 1,
-              "additionalProperties": false,
-              "patternProperties": {
-                "^-?[0-9]+(\\.[0-9]+)?$": {
-                  "type": "number"
+            "then": {
+              "properties": {
+                "objectives": {
+                  "description": "The collector's objectives for the summary type. Keys in this map must be a number between 0 and 1.",
+                  "type": "object",
+                  "minProperties": 1,
+                  "additionalProperties": false,
+                  "patternProperties": {
+                    "^(0(\\.[0-9]+)?|1(\\.0+)?)$": {
+                      "type": "number"
+                    }
+                  }
                 }
               }
             }
