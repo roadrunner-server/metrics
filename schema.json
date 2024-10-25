@@ -65,13 +65,26 @@
           "then": {
             "properties": {
               "buckets": {
-                "description": "The collector's buckets for the histogram type.",
+                "description": "The collector's buckets for the histogram type. Values must be in increasing order. The +Inf bucket is added implicitly at the end. If this array is undefined or empty, the default buckets are used.",
                 "type": "array",
-                "minItems": 1,
                 "uniqueItems": true,
                 "items": {
+                  "minimum": 0,
                   "type": "number"
-                }
+                },
+                "default": [
+                  0.005,
+                  0.01,
+                  0.025,
+                  0.05,
+                  0.1,
+                  0.25,
+                  0.5,
+                  1,
+                  2.5,
+                  5,
+                  10
+                ]
               }
             }
           },
