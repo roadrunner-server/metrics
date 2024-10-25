@@ -53,61 +53,36 @@
                 "type": "string",
                 "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
               }
-            }
-          },
-          "if": {
-            "properties": {
-              "type": {
-                "const": "histogram"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "buckets": {
-                "description": "The collector's buckets for the histogram type. Values must be in increasing order. The +Inf bucket is added implicitly at the end. If this array is undefined or empty, the default buckets are used.",
-                "type": "array",
-                "uniqueItems": true,
-                "items": {
-                  "minimum": 0,
-                  "type": "number"
-                },
-                "default": [
-                  0.005,
-                  0.01,
-                  0.025,
-                  0.05,
-                  0.1,
-                  0.25,
-                  0.5,
-                  1,
-                  2.5,
-                  5,
-                  10
-                ]
-              }
-            }
-          },
-          "else": {
-            "if": {
-              "properties": {
-                "type": {
-                  "const": "summary"
-                }
-              }
             },
-            "then": {
-              "properties": {
-                "objectives": {
-                  "description": "The collector's objectives for the summary type. Keys in this map must be a number between 0 and 1.",
-                  "type": "object",
-                  "minProperties": 1,
-                  "additionalProperties": false,
-                  "patternProperties": {
-                    "^(0(\\.[0-9]+)?|1(\\.0+)?)$": {
-                      "type": "number"
-                    }
-                  }
+            "buckets": {
+              "description": "The collector's buckets for the histogram type. Values must be in increasing order. The +Inf bucket is added implicitly at the end. If this array is undefined or empty, the default buckets are used.",
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "default": [
+                0.005,
+                0.01,
+                0.025,
+                0.05,
+                0.1,
+                0.25,
+                0.5,
+                1,
+                2.5,
+                5,
+                10
+              ]
+            },
+            "objectives": {
+              "description": "The collector's objectives for the summary type. Keys in this map must be a number between 0 and 1. The default value is an empty map, resulting in a summary without quantiles.",
+              "type": "object",
+              "additionalProperties": false,
+              "patternProperties": {
+                "^(0(\\.[0-9]+)?|1(\\.0+)?)$": {
+                  "type": "number"
                 }
               }
             }
