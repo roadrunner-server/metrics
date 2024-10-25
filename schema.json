@@ -1,0 +1,119 @@
+{
+  "$id": "https://raw.githubusercontent.com/roadrunner-server/metrics/refs/heads/master/schema.json",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "description": "All the valid configuration parameters for the Prometheus Metrics plugin for RoadRunner.",
+  "type": "object",
+  "title": "roadrunner-metrics",
+  "additionalProperties": false,
+  "properties": {
+    "address": {
+      "description": "Prometheus client address (path /metrics is appended automatically).",
+      "type": "string",
+      "default": "127.0.0.1:2112",
+      "minLength": 1
+    },
+    "collect": {
+      "description": "Application-specific metrics (published using an RPC connection to the server).",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-zA-Z_:][a-zA-Z0-9_:]*$": {
+          "type": "object",
+          "description": "The metrics to set up in Prometheus. See https://prometheus.io/docs/guides/go-application/ for details.",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "description": "The metric type to collect.",
+              "type": "string",
+              "enum": [
+                "histogram",
+                "gauge",
+                "counter",
+                "summary"
+              ]
+            },
+            "namespace": {
+              "type": "string",
+              "description": "The collector's namespace."
+            },
+            "subsystem": {
+              "type": "string",
+              "description": "The collector's subsystem."
+            },
+            "help": {
+              "type": "string",
+              "description": "The collector's help message."
+            },
+            "labels": {
+              "description": "The collector's metrics labels. These must be in the format supported by Prometheus. See https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels",
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+              }
+            }
+          },
+          "if": {
+            "properties": {
+              "type": {
+                "const": "histogram"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "buckets": {
+                "description": "The collector's buckets for the histogram type. Values must be in increasing order. The +Inf bucket is added implicitly at the end. If this array is undefined or empty, the default buckets are used.",
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                "default": [
+                  0.005,
+                  0.01,
+                  0.025,
+                  0.05,
+                  0.1,
+                  0.25,
+                  0.5,
+                  1,
+                  2.5,
+                  5,
+                  10
+                ]
+              }
+            }
+          },
+          "else": {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "summary"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "objectives": {
+                  "description": "The collector's objectives for the summary type. Keys in this map must be a number between 0 and 1.",
+                  "type": "object",
+                  "minProperties": 1,
+                  "additionalProperties": false,
+                  "patternProperties": {
+                    "^(0(\\.[0-9]+)?|1(\\.0+)?)$": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
