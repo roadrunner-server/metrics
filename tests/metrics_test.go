@@ -568,6 +568,76 @@ func TestUnregister(t *testing.T) {
 	wg.Wait()
 }
 
+func TestUpsertOfMetricsDeclaration(t *testing.T) {
+	cont := endure.New(slog.LevelDebug)
+
+	cfg := &config.Plugin{
+		Version: "2024.2.0",
+		Path:    "configs/.rr-metrics-unregister.yaml",
+	}
+
+	l, oLogger := mocklogger.ZapTestLogger(zap.DebugLevel)
+	err := cont.RegisterAll(
+		cfg,
+		&metrics.Plugin{},
+		&rpcPlugin.Plugin{},
+		l,
+	)
+	assert.NoError(t, err)
+
+	err = cont.Init()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ch, err := cont.Serve()
+	assert.NoError(t, err)
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	stopCh := make(chan struct{}, 1)
+
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case e := <-ch:
+				assert.Fail(t, "error", e.Error.Error())
+			case <-sig:
+				err = cont.Stop()
+				if err != nil {
+					assert.FailNow(t, "error", err.Error())
+				}
+				return
+
+			case <-stopCh:
+				err = cont.Stop()
+				if err != nil {
+					assert.FailNow(t, "error", err.Error())
+				}
+				return
+			}
+		}
+	}()
+
+	address := "127.0.0.1:6005"
+	time.Sleep(time.Second * 2)
+	t.Run("DeclareMetric", declareMetricsTest(address))
+	genericOut, err := getIPV6("http://[::1]:2117/metrics")
+	assert.NoError(t, err)
+	assert.Contains(t, genericOut, "test_metrics_named_collector")
+
+	t.Run("DeclareMetric", declareMetricsTest(address))
+	require.Equal(t, 1, oLogger.FilterMessageSnippet("metric with provided name already exist").Len())
+
+	stopCh <- struct{}{}
+	wg.Wait()
+}
+
 func configuredCounterMetric(address string) func(t *testing.T) {
 	return func(t *testing.T) {
 		conn, err := net.Dial(dialNetwork, address)

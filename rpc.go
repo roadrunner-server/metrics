@@ -176,8 +176,9 @@ func (r *rpc) Declare(nc *NamedCollector, ok *bool) error {
 	r.log.Debug("declaring new metric", zap.String("name", nc.Name), zap.Any("type", nc.Type), zap.String("namespace", nc.Namespace))
 	_, exist := r.p.collectors.Load(nc.Name)
 	if exist {
-		r.log.Error("metric with provided name already exist", zap.String("name", nc.Name), zap.Any("type", nc.Type), zap.String("namespace", nc.Namespace))
-		return errors.E(op, errors.Errorf("tried to register existing collector with the name `%s`", nc.Name))
+		r.log.Warn("metric with provided name already exist", zap.String("name", nc.Name), zap.Any("type", nc.Type), zap.String("namespace", nc.Namespace))
+		*ok = true
+		return nil
 	}
 
 	var promCol prometheus.Collector
