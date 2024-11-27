@@ -15,7 +15,7 @@ require (
 	github.com/roadrunner-server/prometheus/v5 v5.0.3
 	github.com/roadrunner-server/rpc/v5 v5.0.4
 	github.com/roadrunner-server/server/v5 v5.1.2
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	go.uber.org/zap v1.27.0
 )
 
@@ -35,7 +35,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
-	github.com/google/pprof v0.0.0-20241101162523-b92577c0c142 // indirect
+	github.com/google/pprof v0.0.0-20241122213907-cbe949e5a41b // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
@@ -50,19 +50,19 @@ require (
 	github.com/miekg/dns v1.1.62 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/onsi/ginkgo/v2 v2.21.0 // indirect
+	github.com/onsi/ginkgo/v2 v2.22.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.60.1 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
-	github.com/quic-go/quic-go v0.48.1 // indirect
+	github.com/quic-go/quic-go v0.48.2 // indirect
 	github.com/roadrunner-server/api/v4 v4.16.0 // indirect
-	github.com/roadrunner-server/context v1.0.1 // indirect
+	github.com/roadrunner-server/context v1.0.2 // indirect
 	github.com/roadrunner-server/errors v1.4.1 // indirect
 	github.com/roadrunner-server/events v1.0.1 // indirect
-	github.com/roadrunner-server/pool v1.0.2 // indirect
+	github.com/roadrunner-server/pool v1.0.3 // indirect
 	github.com/roadrunner-server/tcplisten v1.5.1 // indirect
 	github.com/sagikazarmark/locafero v0.6.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
