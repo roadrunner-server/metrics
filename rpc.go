@@ -225,10 +225,11 @@ func (r *rpc) Declare(nc *NamedCollector, ok *bool) error {
 		}
 	case Summary:
 		opts := prometheus.SummaryOpts{
-			Name:      nc.Name,
-			Namespace: nc.Namespace,
-			Subsystem: nc.Subsystem,
-			Help:      nc.Help,
+			Name:       nc.Name,
+			Namespace:  nc.Namespace,
+			Subsystem:  nc.Subsystem,
+			Help:       nc.Help,
+			Objectives: nc.Objectives,
 		}
 
 		if len(nc.Labels) != 0 {
