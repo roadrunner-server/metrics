@@ -56,7 +56,7 @@ require (
 	github.com/prometheus/procfs v0.16.0 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/quic-go/quic-go v0.50.1 // indirect
-	github.com/roadrunner-server/api/v4 v4.18.1 // indirect
+	github.com/roadrunner-server/api/v4 v4.19.0 // indirect
 	github.com/roadrunner-server/context v1.0.2 // indirect
 	github.com/roadrunner-server/errors v1.4.1 // indirect
 	github.com/roadrunner-server/events v1.0.1 // indirect
