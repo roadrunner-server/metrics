@@ -115,7 +115,7 @@ func (p *Plugin) Serve() chan error { //nolint:gocyclo
 	defer p.mu.Unlock()
 
 	// register Collected stat providers
-	for i := 0; i < len(p.statProviders); i++ {
+	for i := range p.statProviders {
 		sp := p.statProviders[i]
 		for _, c := range sp.MetricsCollector() {
 			err := p.registry.Register(c)
