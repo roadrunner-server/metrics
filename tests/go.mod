@@ -6,15 +6,15 @@ toolchain go1.24.0
 
 require (
 	github.com/prometheus/client_golang v1.22.0
-	github.com/roadrunner-server/config/v5 v5.1.6
+	github.com/roadrunner-server/config/v5 v5.1.7
 	github.com/roadrunner-server/endure/v2 v2.6.1
 	github.com/roadrunner-server/goridge/v3 v3.8.3
-	github.com/roadrunner-server/http/v5 v5.2.5
-	github.com/roadrunner-server/logger/v5 v5.1.6
+	github.com/roadrunner-server/http/v5 v5.2.6
+	github.com/roadrunner-server/logger/v5 v5.1.7
 	github.com/roadrunner-server/metrics/v5 v5.0.0
-	github.com/roadrunner-server/prometheus/v5 v5.1.5
-	github.com/roadrunner-server/rpc/v5 v5.1.6
-	github.com/roadrunner-server/server/v5 v5.2.7
+	github.com/roadrunner-server/prometheus/v5 v5.1.6
+	github.com/roadrunner-server/rpc/v5 v5.1.7
+	github.com/roadrunner-server/server/v5 v5.2.8
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/zap v1.27.0
 )
@@ -36,7 +36,7 @@ require (
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
-	github.com/google/pprof v0.0.0-20250423184734-337e5dd93bb4 // indirect
+	github.com/google/pprof v0.0.0-20250501235452-c0086092b71a // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
@@ -65,7 +65,7 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.14.0 // indirect
-	github.com/spf13/cast v1.7.1 // indirect
+	github.com/spf13/cast v1.8.0 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/spf13/viper v1.20.1 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
@@ -93,6 +93,7 @@ require (
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
 	golang.org/x/tools v0.32.0 // indirect
+	google.golang.org/genproto v0.0.0-20250428153025-10db94c68c34 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
