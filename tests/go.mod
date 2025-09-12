@@ -6,15 +6,15 @@ toolchain go1.25.1
 
 require (
 	github.com/prometheus/client_golang v1.23.2
-	github.com/roadrunner-server/config/v5 v5.1.8
+	github.com/roadrunner-server/config/v5 v5.1.9
 	github.com/roadrunner-server/endure/v2 v2.6.2
 	github.com/roadrunner-server/goridge/v3 v3.8.3
-	github.com/roadrunner-server/http/v5 v5.2.7
-	github.com/roadrunner-server/logger/v5 v5.1.8
-	github.com/roadrunner-server/metrics/v5 v5.1.8
-	github.com/roadrunner-server/prometheus/v5 v5.1.7
-	github.com/roadrunner-server/rpc/v5 v5.1.8
-	github.com/roadrunner-server/server/v5 v5.2.9
+	github.com/roadrunner-server/http/v5 v5.2.8
+	github.com/roadrunner-server/logger/v5 v5.1.9
+	github.com/roadrunner-server/metrics/v5 v5.1.9
+	github.com/roadrunner-server/prometheus/v5 v5.1.8
+	github.com/roadrunner-server/rpc/v5 v5.1.9
+	github.com/roadrunner-server/server/v5 v5.2.10
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.0
 )
@@ -73,7 +73,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	github.com/zeebo/assert v1.3.1 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
-	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.63.0 // indirect
 	go.opentelemetry.io/contrib/propagators/jaeger v1.38.0 // indirect
 	go.opentelemetry.io/otel v1.38.0 // indirect
