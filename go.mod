@@ -2,7 +2,7 @@ module github.com/roadrunner-server/metrics/v5
 
 go 1.25
 
-toolchain go1.25.2
+toolchain go1.25.3
 
 require (
 	github.com/goccy/go-json v0.10.5
