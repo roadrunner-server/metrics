@@ -11,7 +11,7 @@ require (
 	github.com/roadrunner-server/errors v1.4.1
 	github.com/stretchr/testify v1.11.1
 	github.com/vmihailenco/msgpack/v5 v5.4.1
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	golang.org/x/sys v0.37.0
 )
 
