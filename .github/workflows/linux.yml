@@ -78,7 +78,7 @@ jobs:
           go test -timeout 20m -v -race -cover -tags=debug -failfast -coverpkg=$(cat pkgs.txt) -coverprofile=./coverage-ci/metrics.out -covermode=atomic metrics_test.go plugin1.go
 
       - name: Archive code coverage results
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: coverage
           path: ./tests/coverage-ci/
