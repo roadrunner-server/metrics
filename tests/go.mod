@@ -9,7 +9,7 @@ require (
 	github.com/roadrunner-server/config/v5 v5.1.9
 	github.com/roadrunner-server/endure/v2 v2.6.2
 	github.com/roadrunner-server/goridge/v3 v3.8.3
-	github.com/roadrunner-server/http/v5 v5.2.8
+	github.com/roadrunner-server/http/v5 v5.3.0
 	github.com/roadrunner-server/logger/v5 v5.1.9
 	github.com/roadrunner-server/metrics/v5 v5.1.9
 	github.com/roadrunner-server/prometheus/v5 v5.1.8
@@ -89,7 +89,7 @@ require (
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/tools v0.41.0 // indirect
-	google.golang.org/genproto v0.0.0-20260202165425-ce8ad4cf556b // indirect
+	google.golang.org/genproto v0.0.0-20260203192932-546029d2fa20 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
