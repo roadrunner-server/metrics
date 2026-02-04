@@ -94,8 +94,8 @@ github.com/roadrunner-server/logger/v5 v5.1.9 h1:3Kn+NYXF7Ww5LvkwMZwkv1q99t5qusI
 github.com/roadrunner-server/logger/v5 v5.1.9/go.mod h1:hwct/TWTmxYsVzowLx4g9HkY5z2/gpYOC+UN8btsrAA=
 github.com/roadrunner-server/pool v1.1.3 h1:KMsiL6yuYBWGk73bdO0akwP+fJ63bxDF972JukCGsxI=
 github.com/roadrunner-server/pool v1.1.3/go.mod h1:8ceC7NvZKJRciv+KJmcyk5CeDugoel6GD+crm5kBFW0=
-github.com/roadrunner-server/prometheus/v5 v5.1.8 h1:6HFR9bAduLOsxXf73+Wa4Ke9eCEZl/a+JyHgvCJDVP0=
-github.com/roadrunner-server/prometheus/v5 v5.1.8/go.mod h1:DcTnhVIjs7G8ASvwW03bcTZ5BsPuuBCFUy6kCIo2D08=
+github.com/roadrunner-server/prometheus/v5 v5.2.0 h1:1KOacYOJL6ZN4vCf+SZIREFIqaYZ8WgWOiZifS88gns=
+github.com/roadrunner-server/prometheus/v5 v5.2.0/go.mod h1:tzN4CZataiCzNyY9V5E0leLqvDmcWySUVnSxcwxFIrc=
 github.com/roadrunner-server/rpc/v5 v5.1.9 h1:AbRd2xEkWY8N3J4GUhoDeL+pnfwzKHazV4k40jZ+YDk=
 github.com/roadrunner-server/rpc/v5 v5.1.9/go.mod h1:TtbPY1cPvL46Mk9Dh4qwx33WO4R3m1lZkgL2q2MfHtA=
 github.com/roadrunner-server/server/v5 v5.2.10 h1:IshR3mlXJ/fh+zY17tN3Q7GgaanMzA7H9wwEz4PxCSA=
