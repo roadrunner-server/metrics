@@ -11,7 +11,7 @@ require (
 	github.com/roadrunner-server/goridge/v3 v3.8.3
 	github.com/roadrunner-server/http/v5 v5.3.0
 	github.com/roadrunner-server/logger/v5 v5.1.9
-	github.com/roadrunner-server/metrics/v5 v5.1.9
+	github.com/roadrunner-server/metrics/v5 v5.2.0
 	github.com/roadrunner-server/prometheus/v5 v5.2.0
 	github.com/roadrunner-server/rpc/v5 v5.1.9
 	github.com/roadrunner-server/server/v5 v5.2.10
