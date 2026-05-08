@@ -20,7 +20,7 @@ import (
 	goridgeRpc "github.com/roadrunner-server/goridge/v3/pkg/rpc"
 	httpPlugin "github.com/roadrunner-server/http/v5"
 	"github.com/roadrunner-server/logger/v5"
-	"github.com/roadrunner-server/metrics/v5"
+	"github.com/roadrunner-server/metrics/v6"
 	"github.com/roadrunner-server/prometheus/v5"
 	rpcPlugin "github.com/roadrunner-server/rpc/v5"
 	"github.com/roadrunner-server/server/v5"
