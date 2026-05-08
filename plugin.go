@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	stderr "errors"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -13,7 +14,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/roadrunner-server/endure/v2/dep"
 	"github.com/roadrunner-server/errors"
-	"go.uber.org/zap"
 	"golang.org/x/sys/cpu"
 )
 
@@ -27,7 +27,7 @@ const (
 // Plugin to manage application metrics using Prometheus.
 type Plugin struct {
 	cfg        *Config
-	log        *zap.Logger
+	log        *slog.Logger
 	mu         sync.Mutex // all receivers are pointers
 	http       *http.Server
 	collectors sync.Map // name -> collector
@@ -51,7 +51,7 @@ type Configurer interface {
 }
 
 type Logger interface {
-	NamedLogger(name string) *zap.Logger
+	NamedLogger(name string) *slog.Logger
 }
 
 // StatProvider used to collect all plugins which might report to the prometheus
@@ -240,7 +240,7 @@ func (p *Plugin) Stop(context.Context) error {
 		err := p.http.Shutdown(ctx)
 		if err != nil {
 			// Function should be Stop() error
-			p.log.Error("stop error", zap.Error(errors.Errorf("error shutting down the metrics server: error %v", err)))
+			p.log.Error("stop error", "error", errors.Errorf("error shutting down the metrics server: error %v", err))
 		}
 	}
 	return nil
