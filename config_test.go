@@ -2,9 +2,9 @@ package metrics
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 
-	"github.com/goccy/go-json"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 )

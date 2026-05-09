@@ -13,11 +13,9 @@ import (
 	"testing"
 	"time"
 
-	mocklogger "tests/mock"
-
 	"github.com/roadrunner-server/config/v5"
 	"github.com/roadrunner-server/endure/v2"
-	goridgeRpc "github.com/roadrunner-server/goridge/v3/pkg/rpc"
+	goridgeRpc "github.com/roadrunner-server/goridge/v4/pkg/rpc"
 	httpPlugin "github.com/roadrunner-server/http/v5"
 	"github.com/roadrunner-server/logger/v5"
 	"github.com/roadrunner-server/metrics/v6"
@@ -26,7 +24,7 @@ import (
 	"github.com/roadrunner-server/server/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
+	mocklogger "tests/mock"
 )
 
 const dialNetwork = "tcp"
@@ -208,7 +206,7 @@ func TestMetricsDifferentRPCCalls(t *testing.T) {
 		Path:    "configs/.rr-metrics-different-rpc-calls.yaml",
 	}
 
-	l, oLogger := mocklogger.ZapTestLogger(zap.DebugLevel)
+	l, oLogger := mocklogger.SlogTestLogger(slog.LevelDebug)
 	err := cont.RegisterAll(
 		cfg,
 		&metrics.Plugin{},
@@ -352,7 +350,7 @@ func TestHTTPMetrics(t *testing.T) {
 		Path:    "configs/.rr-metrics-http.yaml",
 	}
 
-	l, oLogger := mocklogger.ZapTestLogger(zap.DebugLevel)
+	l, oLogger := mocklogger.SlogTestLogger(slog.LevelDebug)
 	err := cont.RegisterAll(
 		cfg,
 		&metrics.Plugin{},
@@ -501,7 +499,7 @@ func TestUnregister(t *testing.T) {
 		Path:    "configs/.rr-metrics-unregister.yaml",
 	}
 
-	l, oLogger := mocklogger.ZapTestLogger(zap.DebugLevel)
+	l, oLogger := mocklogger.SlogTestLogger(slog.LevelDebug)
 	err := cont.RegisterAll(
 		cfg,
 		&metrics.Plugin{},
@@ -576,7 +574,7 @@ func TestUpsertOfMetricsDeclaration(t *testing.T) {
 		Path:    "configs/.rr-metrics-unregister.yaml",
 	}
 
-	l, oLogger := mocklogger.ZapTestLogger(zap.DebugLevel)
+	l, oLogger := mocklogger.SlogTestLogger(slog.LevelDebug)
 	err := cont.RegisterAll(
 		cfg,
 		&metrics.Plugin{},
