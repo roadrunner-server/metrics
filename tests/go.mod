@@ -14,7 +14,7 @@ require (
 	github.com/roadrunner-server/metrics/v6 v6.0.0
 	github.com/roadrunner-server/prometheus/v6 v6.0.0-beta.2
 	github.com/roadrunner-server/rpc/v6 v6.0.0-beta.3
-	github.com/roadrunner-server/server/v6 v6.0.0-beta.5
+	github.com/roadrunner-server/server/v6 v6.0.0-beta.6
 	github.com/stretchr/testify v1.11.1
 )
 
