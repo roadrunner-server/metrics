@@ -96,6 +96,10 @@ func (r *rpc) Observe(_ context.Context, req *connect.Request[metricsV1.ObserveR
 	}
 
 	switch c := col.(type) {
+	// prometheus.Histogram and prometheus.Summary have identical method sets
+	// (Metric + Collector + Observe(float64)), so scalar Summary instances
+	// also match this branch — type-switch picks the first matching interface
+	// in source order.
 	case prometheus.Histogram:
 		c.Observe(m.GetValue())
 	case *prometheus.HistogramVec:

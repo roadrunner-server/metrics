@@ -177,6 +177,26 @@ func TestMetricsConnectAPI(t *testing.T) {
 	}))
 	require.NoError(t, err)
 	require.True(t, obsResp.Msg.GetOk())
+
+	// Scalar Summary Observe — locks in the prometheus.Summary branch of
+	// the type-switch (buildPromCollector returns NewSummary when labels are
+	// empty, distinct from NewSummaryVec).
+	_, err = client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{
+		Collector: &metricsV1.NamedCollector{
+			Name: "api_summary_scalar",
+			Collector: &metricsV1.Collector{
+				Type:       metricsV1.CollectorType_COLLECTOR_TYPE_SUMMARY,
+				Help:       "API test scalar summary",
+				Objectives: []*metricsV1.Objective{{Quantile: 0.95, Error: 0.01}},
+			},
+		},
+	}))
+	require.NoError(t, err)
+	scalarResp, err := client.Observe(ctx, connect.NewRequest(&metricsV1.ObserveRequest{
+		Metric: &metricsV1.Metric{Name: "api_summary_scalar", Value: 1.23},
+	}))
+	require.NoError(t, err)
+	require.True(t, scalarResp.Msg.GetOk())
 }
 
 // TestMetricsHTTPApi exercises the metrics RPCs through plain HTTP/1.1 with
