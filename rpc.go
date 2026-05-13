@@ -1,10 +1,22 @@
 package metrics
 
 import (
+	"context"
+	stderr "errors"
+	"fmt"
 	"log/slog"
 
+	"connectrpc.com/connect"
 	"github.com/prometheus/client_golang/prometheus"
+	metricsV1 "github.com/roadrunner-server/api-go/v6/metrics/v1"
 	"github.com/roadrunner-server/errors"
+)
+
+var (
+	errUndefinedCollector  = stderr.New("undefined collector")
+	errRequiredLabels      = stderr.New("required labels for collector")
+	errUnsupportedOpForCol = stderr.New("collector does not support the requested operation")
+	errUnknownCollectorTyp = stderr.New("unknown collector type")
 )
 
 type rpc struct {
@@ -12,319 +24,240 @@ type rpc struct {
 	log *slog.Logger
 }
 
-// Metric represents a single metric produced by the application.
-type Metric struct {
-	// Collector name.
-	Name string `msgpack:"alias:name"`
-	// Collector value.
-	Value float64 `msgpack:"alias:value"`
-	// Labels associated with metric. Only for vector metrics. Must be provided in a form of label values.
-	Labels []string `msgpack:"alias:labels"`
-}
+func (r *rpc) Add(_ context.Context, req *connect.Request[metricsV1.AddRequest]) (*connect.Response[metricsV1.Response], error) {
+	m := req.Msg.GetMetric()
+	r.log.Debug("adding metric", "name", m.GetName(), "value", m.GetValue(), "labels", m.GetLabels())
 
-// Add new metric to the designated collector.
-func (r *rpc) Add(m *Metric, ok *bool) error {
-	const op = errors.Op("metrics_plugin_add")
-	r.log.Debug("adding metric", "name", m.Name, "value", m.Value, "labels", m.Labels)
-	c, exist := r.p.collectors.Load(m.Name)
-	if !exist {
-		r.log.Error("undefined collector", "collector", m.Name)
-		return errors.E(op, errors.Errorf("undefined collector %s, try first Declare the desired collector", m.Name))
+	col, code, err := r.lookupCollector(m.GetName())
+	if err != nil {
+		return nil, connect.NewError(code, err)
 	}
 
-	col := c.(*collector)
-
-	switch c := col.col.(type) {
+	switch c := col.(type) {
 	case prometheus.Gauge:
-		c.Add(m.Value)
-
+		c.Add(m.GetValue())
 	case *prometheus.GaugeVec:
-		if len(m.Labels) == 0 {
-			r.log.Error("required labels for collector", "collector", m.Name)
-			return errors.E(op, errors.Errorf("required labels for collector %s", m.Name))
-		}
-
-		gauge, err := c.GetMetricWithLabelValues(m.Labels...)
+		gv, err := vecMetric(c, m)
 		if err != nil {
-			r.log.Error("failed to get metrics with label values", "collector", m.Name, "labels", m.Labels)
-			return errors.E(op, err)
+			return nil, err
 		}
-		gauge.Add(m.Value)
+		gv.Add(m.GetValue())
 	case prometheus.Counter:
-		c.Add(m.Value)
-
+		c.Add(m.GetValue())
 	case *prometheus.CounterVec:
-		if len(m.Labels) == 0 {
-			return errors.E(op, errors.Errorf("required labels for collector `%s`", m.Name))
-		}
-
-		gauge, err := c.GetMetricWithLabelValues(m.Labels...)
+		cv, err := vecMetric(c, m)
 		if err != nil {
-			r.log.Error("failed to get metrics with label values", "collector", m.Name, "labels", m.Labels)
-			return errors.E(op, err)
+			return nil, err
 		}
-		gauge.Add(m.Value)
-
+		cv.Add(m.GetValue())
 	default:
-		return errors.E(op, errors.Errorf("collector %s does not support method `Add`", m.Name))
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			fmt.Errorf("%w: %s does not support Add", errUnsupportedOpForCol, m.GetName()))
 	}
 
-	// RPC, set ok to true as return value. Need by r.Call reply argument
-	*ok = true
-	r.log.Debug("metric successfully added", "name", m.Name, "labels", m.Labels, "value", m.Value)
-	return nil
+	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
 }
 
-// Sub subtract the value from the specific metric (gauge only).
-func (r *rpc) Sub(m *Metric, ok *bool) error {
-	const op = errors.Op("metrics_plugin_sub")
-	r.log.Debug("subtracting value from metric", "name", m.Name, "value", m.Value, "labels", m.Labels)
-	c, exist := r.p.collectors.Load(m.Name)
-	if !exist {
-		r.log.Error("undefined collector", "name", m.Name, "value", m.Value, "labels", m.Labels)
-		return errors.E(op, errors.Errorf("undefined collector %s", m.Name))
-	}
-	if c == nil {
-		// can it be a nil ??? I guess can't
-		return errors.E(op, errors.Errorf("undefined collector %s", m.Name))
+func (r *rpc) Sub(_ context.Context, req *connect.Request[metricsV1.SubRequest]) (*connect.Response[metricsV1.Response], error) {
+	m := req.Msg.GetMetric()
+	r.log.Debug("subtracting metric", "name", m.GetName(), "value", m.GetValue(), "labels", m.GetLabels())
+
+	col, code, err := r.lookupCollector(m.GetName())
+	if err != nil {
+		return nil, connect.NewError(code, err)
 	}
 
-	col := c.(*collector)
-
-	switch c := col.col.(type) {
+	switch c := col.(type) {
 	case prometheus.Gauge:
-		c.Sub(m.Value)
-
+		c.Sub(m.GetValue())
 	case *prometheus.GaugeVec:
-		if len(m.Labels) == 0 {
-			r.log.Error("required labels for collector, but none was provided", "name", m.Name, "value", m.Value)
-			return errors.E(op, errors.Errorf("required labels for collector %s", m.Name))
-		}
-
-		gauge, err := c.GetMetricWithLabelValues(m.Labels...)
+		gv, err := vecMetric(c, m)
 		if err != nil {
-			r.log.Error("failed to get metrics with label values", "collector", m.Name, "labels", m.Labels)
-			return errors.E(op, err)
+			return nil, err
 		}
-		gauge.Sub(m.Value)
+		gv.Sub(m.GetValue())
 	default:
-		return errors.E(op, errors.Errorf("collector `%s` does not support method `Sub`", m.Name))
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			fmt.Errorf("%w: %s does not support Sub", errUnsupportedOpForCol, m.GetName()))
 	}
-	r.log.Debug("subtracting operation finished successfully", "name", m.Name, "labels", m.Labels, "value", m.Value)
 
-	*ok = true
-	return nil
+	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
 }
 
-// Observe the value (histogram and summary only).
-func (r *rpc) Observe(m *Metric, ok *bool) error {
-	const op = errors.Op("metrics_plugin_observe")
-	r.log.Debug("observing metric", "name", m.Name, "value", m.Value, "labels", m.Labels)
+func (r *rpc) Observe(_ context.Context, req *connect.Request[metricsV1.ObserveRequest]) (*connect.Response[metricsV1.Response], error) {
+	m := req.Msg.GetMetric()
+	r.log.Debug("observing metric", "name", m.GetName(), "value", m.GetValue(), "labels", m.GetLabels())
 
-	c, exist := r.p.collectors.Load(m.Name)
-	if !exist {
-		r.log.Error("undefined collector", "name", m.Name, "value", m.Value, "labels", m.Labels)
-		return errors.E(op, errors.Errorf("undefined collector %s", m.Name))
-	}
-	if c == nil {
-		return errors.E(op, errors.Errorf("undefined collector %s", m.Name))
+	col, code, err := r.lookupCollector(m.GetName())
+	if err != nil {
+		return nil, connect.NewError(code, err)
 	}
 
-	col := c.(*collector)
-
-	switch c := col.col.(type) {
-	case *prometheus.SummaryVec:
-		if len(m.Labels) == 0 {
-			return errors.E(op, errors.Errorf("required labels for collector `%s`", m.Name))
-		}
-
-		observer, err := c.GetMetricWithLabelValues(m.Labels...)
-		if err != nil {
-			return errors.E(op, err)
-		}
-		observer.Observe(m.Value)
-
+	switch c := col.(type) {
 	case prometheus.Histogram:
-		c.Observe(m.Value)
-
+		c.Observe(m.GetValue())
 	case *prometheus.HistogramVec:
-		if len(m.Labels) == 0 {
-			return errors.E(op, errors.Errorf("required labels for collector `%s`", m.Name))
-		}
-
-		observer, err := c.GetMetricWithLabelValues(m.Labels...)
+		ov, err := vecObserver(c, m)
 		if err != nil {
-			r.log.Error("failed to get metrics with label values", "collector", m.Name, "labels", m.Labels)
-			return errors.E(op, err)
+			return nil, err
 		}
-		observer.Observe(m.Value)
+		ov.Observe(m.GetValue())
+	case *prometheus.SummaryVec:
+		ov, err := vecObserver(c, m)
+		if err != nil {
+			return nil, err
+		}
+		ov.Observe(m.GetValue())
 	default:
-		return errors.E(op, errors.Errorf("collector `%s` does not support method `Observe`", m.Name))
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			fmt.Errorf("%w: %s does not support Observe", errUnsupportedOpForCol, m.GetName()))
 	}
 
-	r.log.Debug("observe operation finished successfully", "name", m.Name, "labels", m.Labels, "value", m.Value)
-
-	*ok = true
-	return nil
+	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
 }
 
-// Declare is used to register new collector in prometheus
-func (r *rpc) Declare(nc *NamedCollector, ok *bool) error {
-	const op = errors.Op("metrics_plugin_declare")
+func (r *rpc) Set(_ context.Context, req *connect.Request[metricsV1.SetRequest]) (*connect.Response[metricsV1.Response], error) {
+	m := req.Msg.GetMetric()
+	r.log.Debug("setting metric", "name", m.GetName(), "value", m.GetValue(), "labels", m.GetLabels())
+
+	col, code, err := r.lookupCollector(m.GetName())
+	if err != nil {
+		return nil, connect.NewError(code, err)
+	}
+
+	switch c := col.(type) {
+	case prometheus.Gauge:
+		c.Set(m.GetValue())
+	case *prometheus.GaugeVec:
+		gv, err := vecMetric(c, m)
+		if err != nil {
+			return nil, err
+		}
+		gv.Set(m.GetValue())
+	default:
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			fmt.Errorf("%w: %s does not support Set", errUnsupportedOpForCol, m.GetName()))
+	}
+
+	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
+}
+
+func (r *rpc) Declare(_ context.Context, req *connect.Request[metricsV1.DeclareRequest]) (*connect.Response[metricsV1.Response], error) {
+	const op = errors.Op("metrics_rpc_declare")
+
+	nc := req.Msg.GetCollector()
 	r.p.mu.Lock()
 	defer r.p.mu.Unlock()
 
-	r.log.Debug("declaring new metric", "name", nc.Name, "type", nc.Type, "namespace", nc.Namespace)
-	_, exist := r.p.collectors.Load(nc.Name)
-	if exist {
-		r.log.Warn("metric with provided name already exist", "name", nc.Name, "type", nc.Type, "namespace", nc.Namespace)
-		*ok = true
-		return nil
+	r.log.Debug("declaring metric", "name", nc.GetName(), "type", nc.GetCollector().GetType(), "namespace", nc.GetCollector().GetNamespace())
+	if _, exist := r.p.collectors.Load(nc.GetName()); exist {
+		r.log.Warn("metric with provided name already exist", "name", nc.GetName())
+		return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
 	}
 
-	var promCol prometheus.Collector
-	switch nc.Type {
-	case Histogram:
-		opts := prometheus.HistogramOpts{
-			Name:      nc.Name,
-			Namespace: nc.Namespace,
-			Subsystem: nc.Subsystem,
-			Help:      nc.Help,
-			Buckets:   nc.Buckets,
-		}
-
-		if len(nc.Labels) != 0 {
-			promCol = prometheus.NewHistogramVec(opts, nc.Labels)
-		} else {
-			promCol = prometheus.NewHistogram(opts)
-		}
-	case Gauge:
-		opts := prometheus.GaugeOpts{
-			Name:      nc.Name,
-			Namespace: nc.Namespace,
-			Subsystem: nc.Subsystem,
-			Help:      nc.Help,
-		}
-
-		if len(nc.Labels) != 0 {
-			promCol = prometheus.NewGaugeVec(opts, nc.Labels)
-		} else {
-			promCol = prometheus.NewGauge(opts)
-		}
-	case Counter:
-		opts := prometheus.CounterOpts{
-			Name:      nc.Name,
-			Namespace: nc.Namespace,
-			Subsystem: nc.Subsystem,
-			Help:      nc.Help,
-		}
-
-		if len(nc.Labels) != 0 {
-			promCol = prometheus.NewCounterVec(opts, nc.Labels)
-		} else {
-			promCol = prometheus.NewCounter(opts)
-		}
-	case Summary:
-		opts := prometheus.SummaryOpts{
-			Name:       nc.Name,
-			Namespace:  nc.Namespace,
-			Subsystem:  nc.Subsystem,
-			Help:       nc.Help,
-			Objectives: nc.Objectives,
-		}
-
-		if len(nc.Labels) != 0 {
-			promCol = prometheus.NewSummaryVec(opts, nc.Labels)
-		} else {
-			promCol = prometheus.NewSummary(opts)
-		}
-
-	default:
-		return errors.E(op, errors.Errorf("unknown collector type %s", nc.Type))
-	}
-
-	// that method might panic, we handle it by recover
-	err := r.p.Register(promCol)
+	promCol, err := buildPromCollector(nc)
 	if err != nil {
-		*ok = false
-		return errors.E(op, err)
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.E(op, err))
 	}
 
-	col := &collector{
-		col:        promCol,
-		registered: true,
+	if err := r.p.Register(promCol); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.E(op, err))
 	}
 
-	// add collector to sync.Map
-	r.p.collectors.Store(nc.Name, col)
-
-	r.log.Debug("metric successfully added", "name", nc.Name, "type", nc.Type, "namespace", nc.Namespace)
-
-	*ok = true
-	return nil
+	r.p.collectors.Store(nc.GetName(), &collector{col: promCol, registered: true})
+	r.log.Debug("metric registered", "name", nc.GetName())
+	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
 }
 
-// Unregister removes collector from the prometheus registry
-func (r *rpc) Unregister(name string, ok *bool) error {
-	const op = errors.Op("metrics_plugin_unregister")
-
+func (r *rpc) Unregister(_ context.Context, req *connect.Request[metricsV1.UnregisterRequest]) (*connect.Response[metricsV1.Response], error) {
+	name := req.Msg.GetName()
 	r.log.Debug("unregistering collector", "name", name)
 
 	c, exist := r.p.collectors.LoadAndDelete(name)
 	if !exist || c == nil {
-		return errors.E(op, errors.Errorf("undefined collector %s", name))
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("%w: %s", errUndefinedCollector, name))
 	}
 
-	if col, k := c.(*collector); k {
-		if r.p.registry.Unregister(col.col) {
-			*ok = true
-			r.log.Debug("collector was successfully unregistered", "name", name)
-			return nil
-		}
-
-		r.log.Debug("collector was deleted from the RR registry but not from the prometheus collector", "name", name)
+	col, ok := c.(*collector)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("collectors map held non-*collector for %s", name))
 	}
-
-	return nil
+	if r.p.registry.Unregister(col.col) {
+		r.log.Debug("collector unregistered", "name", name)
+		return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
+	}
+	r.log.Debug("collector deleted from RR but not from prometheus registry", "name", name)
+	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
 }
 
-// Set the metric value (only for gaude).
-func (r *rpc) Set(m *Metric, ok *bool) (err error) {
-	const op = errors.Op("metrics_plugin_set")
-	r.log.Debug("observing metric", "name", m.Name, "value", m.Value, "labels", m.Labels)
-
-	c, exist := r.p.collectors.Load(m.Name)
-	if !exist {
-		return errors.E(op, errors.Errorf("undefined collector %s", m.Name))
+func (r *rpc) lookupCollector(name string) (prometheus.Collector, connect.Code, error) {
+	c, exist := r.p.collectors.Load(name)
+	if !exist || c == nil {
+		r.log.Error("undefined collector", "collector", name)
+		return nil, connect.CodeNotFound, fmt.Errorf("%w: %s", errUndefinedCollector, name)
 	}
-	if c == nil {
-		return errors.E(op, errors.Errorf("undefined collector %s", m.Name))
+	col, ok := c.(*collector)
+	if !ok {
+		return nil, connect.CodeInternal, fmt.Errorf("collectors map held non-*collector for %s", name)
 	}
+	return col.col, 0, nil
+}
 
-	col := c.(*collector)
+func vecMetric[T interface {
+	GetMetricWithLabelValues(lvs ...string) (V, error)
+}, V any](c T, m *metricsV1.Metric) (V, error) {
+	var zero V
+	if len(m.GetLabels()) == 0 {
+		return zero, connect.NewError(connect.CodeInvalidArgument,
+			fmt.Errorf("%w: %s", errRequiredLabels, m.GetName()))
+	}
+	v, err := c.GetMetricWithLabelValues(m.GetLabels()...)
+	if err != nil {
+		return zero, connect.NewError(connect.CodeInternal, err)
+	}
+	return v, nil
+}
 
-	switch c := col.col.(type) {
-	case prometheus.Gauge:
-		c.Set(m.Value)
+func vecObserver[T interface {
+	GetMetricWithLabelValues(lvs ...string) (prometheus.Observer, error)
+}](c T, m *metricsV1.Metric) (prometheus.Observer, error) {
+	return vecMetric[T, prometheus.Observer](c, m)
+}
 
-	case *prometheus.GaugeVec:
-		if len(m.Labels) == 0 {
-			r.log.Error("required labels for collector", "collector", m.Name)
-			return errors.E(op, errors.Errorf("required labels for collector %s", m.Name))
+func buildPromCollector(nc *metricsV1.NamedCollector) (prometheus.Collector, error) {
+	col := nc.GetCollector()
+	switch col.GetType() {
+	case metricsV1.CollectorType_COLLECTOR_TYPE_HISTOGRAM:
+		opts := prometheus.HistogramOpts{Name: nc.GetName(), Namespace: col.GetNamespace(), Subsystem: col.GetSubsystem(), Help: col.GetHelp(), Buckets: col.GetBuckets()}
+		if len(col.GetLabels()) != 0 {
+			return prometheus.NewHistogramVec(opts, col.GetLabels()), nil
 		}
-		gauge, err := c.GetMetricWithLabelValues(m.Labels...)
-		if err != nil {
-			r.log.Error("failed to get metrics with label values", "collector", m.Name, "labels", m.Labels)
-			return errors.E(op, err)
+		return prometheus.NewHistogram(opts), nil
+	case metricsV1.CollectorType_COLLECTOR_TYPE_GAUGE:
+		opts := prometheus.GaugeOpts{Name: nc.GetName(), Namespace: col.GetNamespace(), Subsystem: col.GetSubsystem(), Help: col.GetHelp()}
+		if len(col.GetLabels()) != 0 {
+			return prometheus.NewGaugeVec(opts, col.GetLabels()), nil
 		}
-		gauge.Set(m.Value)
-
+		return prometheus.NewGauge(opts), nil
+	case metricsV1.CollectorType_COLLECTOR_TYPE_COUNTER:
+		opts := prometheus.CounterOpts{Name: nc.GetName(), Namespace: col.GetNamespace(), Subsystem: col.GetSubsystem(), Help: col.GetHelp()}
+		if len(col.GetLabels()) != 0 {
+			return prometheus.NewCounterVec(opts, col.GetLabels()), nil
+		}
+		return prometheus.NewCounter(opts), nil
+	case metricsV1.CollectorType_COLLECTOR_TYPE_SUMMARY:
+		objectives := make(map[float64]float64, len(col.GetObjectives()))
+		for _, o := range col.GetObjectives() {
+			objectives[o.GetQuantile()] = o.GetError()
+		}
+		opts := prometheus.SummaryOpts{Name: nc.GetName(), Namespace: col.GetNamespace(), Subsystem: col.GetSubsystem(), Help: col.GetHelp(), Objectives: objectives}
+		if len(col.GetLabels()) != 0 {
+			return prometheus.NewSummaryVec(opts, col.GetLabels()), nil
+		}
+		return prometheus.NewSummary(opts), nil
+	case metricsV1.CollectorType_COLLECTOR_TYPE_UNSPECIFIED:
+		return nil, fmt.Errorf("%w: unspecified", errUnknownCollectorTyp)
 	default:
-		return errors.E(op, errors.Errorf("collector `%s` does not support method Set", m.Name))
+		return nil, fmt.Errorf("%w: %v", errUnknownCollectorTyp, col.GetType())
 	}
-
-	r.log.Debug("set operation finished successfully", "name", m.Name, "labels", m.Labels, "value", m.Value)
-
-	*ok = true
-	return nil
 }

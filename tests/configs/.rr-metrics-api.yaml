@@ -1,0 +1,15 @@
+version: '3'
+
+rpc:
+  listen: tcp://127.0.0.1:6001
+
+metrics:
+  address: "127.0.0.1:2115"
+  collect:
+    app_metric_counter:
+      type: counter
+      help: "Counter for API tests"
+
+logs:
+  mode: development
+  level: error
