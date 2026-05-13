@@ -190,8 +190,11 @@ func (r *rpc) Unregister(_ context.Context, req *connect.Request[metricsV1.Unreg
 		r.log.Debug("collector was successfully unregistered", "name", name)
 		return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
 	}
+	// Preserves legacy contract: prometheus refused to unregister (already
+	// gone, or never registered there). The collector is removed from our map
+	// either way, but the caller deserves to know prometheus state diverged.
 	r.log.Debug("collector was deleted from the RR registry but not from the prometheus collector", "name", name)
-	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
+	return connect.NewResponse(&metricsV1.Response{Ok: false}), nil
 }
 
 func (r *rpc) lookupCollector(name string) (prometheus.Collector, connect.Code, error) {
