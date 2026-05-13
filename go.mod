@@ -5,11 +5,12 @@ go 1.26
 toolchain go1.26.0
 
 require (
+	connectrpc.com/connect v1.19.2
 	github.com/prometheus/client_golang v1.23.2
+	github.com/roadrunner-server/api-go/v6 v6.0.0-beta.9
 	github.com/roadrunner-server/endure/v2 v2.6.2
 	github.com/roadrunner-server/errors v1.5.0
 	github.com/stretchr/testify v1.11.1
-	github.com/vmihailenco/msgpack/v5 v5.4.1
 	golang.org/x/sys v0.44.0
 )
 
@@ -24,8 +25,11 @@ require (
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/procfs v0.20.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
-	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
+	golang.org/x/net v0.54.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260511170946-3700d4141b60 // indirect
+	google.golang.org/grpc v1.81.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -1,11 +1,12 @@
 package metrics
 
 import (
+	"context"
+	"crypto/tls"
 	"io"
 	"log/slog"
 	"net"
 	"net/http"
-	"net/rpc"
 	"os"
 	"os/signal"
 	"sync"
@@ -13,9 +14,13 @@ import (
 	"testing"
 	"time"
 
+	mocklogger "tests/mock"
+
+	"connectrpc.com/connect"
+	metricsV1 "github.com/roadrunner-server/api-go/v6/metrics/v1"
+	"github.com/roadrunner-server/api-go/v6/metrics/v1/metricsV1connect"
 	"github.com/roadrunner-server/config/v6"
 	"github.com/roadrunner-server/endure/v2"
-	goridgeRpc "github.com/roadrunner-server/goridge/v4/pkg/rpc"
 	httpPlugin "github.com/roadrunner-server/http/v6"
 	"github.com/roadrunner-server/logger/v6"
 	"github.com/roadrunner-server/metrics/v6"
@@ -24,10 +29,51 @@ import (
 	"github.com/roadrunner-server/server/v6"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	mocklogger "tests/mock"
+	"golang.org/x/net/http2"
 )
 
-const dialNetwork = "tcp"
+func newMetricsClient(address string) metricsV1connect.MetricsServiceClient {
+	httpc := &http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http2.Transport{
+			AllowHTTP: true,
+			DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+				return (&net.Dialer{Timeout: 30 * time.Second}).DialContext(ctx, network, addr)
+			},
+		},
+	}
+	return metricsV1connect.NewMetricsServiceClient(httpc, "http://"+address)
+}
+
+func toProtoCollector(nc metrics.NamedCollector) *metricsV1.NamedCollector {
+	var t metricsV1.CollectorType
+	switch nc.Type {
+	case metrics.Histogram:
+		t = metricsV1.CollectorType_COLLECTOR_TYPE_HISTOGRAM
+	case metrics.Gauge:
+		t = metricsV1.CollectorType_COLLECTOR_TYPE_GAUGE
+	case metrics.Counter:
+		t = metricsV1.CollectorType_COLLECTOR_TYPE_COUNTER
+	case metrics.Summary:
+		t = metricsV1.CollectorType_COLLECTOR_TYPE_SUMMARY
+	}
+	objectives := make([]*metricsV1.Objective, 0, len(nc.Objectives))
+	for q, e := range nc.Objectives {
+		objectives = append(objectives, &metricsV1.Objective{Quantile: q, Error: e})
+	}
+	return &metricsV1.NamedCollector{
+		Name: nc.Name,
+		Collector: &metricsV1.Collector{
+			Namespace:  nc.Namespace,
+			Subsystem:  nc.Subsystem,
+			Type:       t,
+			Help:       nc.Help,
+			Labels:     nc.Labels,
+			Buckets:    nc.Buckets,
+			Objectives: objectives,
+		},
+	}
+}
 
 func TestMetricsInit(t *testing.T) {
 	cont := endure.New(slog.LevelDebug)
@@ -638,31 +684,19 @@ func TestUpsertOfMetricsDeclaration(t *testing.T) {
 
 func configuredCounterMetric(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
+		client := newMetricsClient(address)
+		resp, err := client.Add(t.Context(), connect.NewRequest(&metricsV1.AddRequest{
+			Metric: &metricsV1.Metric{Name: "app_metric_counter", Value: 100.0},
+		}))
 		assert.NoError(t, err)
-		defer func() {
-			_ = conn.Close()
-		}()
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
-
-		assert.NoError(t, client.Call("metrics.Add", metrics.Metric{
-			Name:  "app_metric_counter",
-			Value: 100.0,
-		}, &ret))
-		assert.True(t, ret)
+		assert.True(t, resp.Msg.GetOk())
 	}
 }
 
 func observeMetricNotEnoughLabels(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
-		assert.NoError(t, err)
-		defer func() {
-			_ = conn.Close()
-		}()
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
+		client := newMetricsClient(address)
+		ctx := t.Context()
 
 		nc := metrics.NamedCollector{
 			Name: "observe_observeMetricNotEnoughLabels",
@@ -675,29 +709,21 @@ func observeMetricNotEnoughLabels(address string) func(t *testing.T) {
 			},
 		}
 
-		err = client.Call("metrics.Declare", nc, &ret)
+		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
-		ret = false
+		assert.True(t, declareResp.Msg.GetOk())
 
-		assert.Error(t, client.Call("metrics.Observe", metrics.Metric{
-			Name:   "observe_observeMetric",
-			Value:  100.0,
-			Labels: []string{"test"},
-		}, &ret))
-		assert.False(t, ret)
+		_, err = client.Observe(ctx, connect.NewRequest(&metricsV1.ObserveRequest{
+			Metric: &metricsV1.Metric{Name: "observe_observeMetric", Value: 100.0, Labels: []string{"test"}},
+		}))
+		assert.Error(t, err)
 	}
 }
 
 func observeMetric(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
-		assert.NoError(t, err)
-		defer func() {
-			_ = conn.Close()
-		}()
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
+		client := newMetricsClient(address)
+		ctx := t.Context()
 
 		nc := metrics.NamedCollector{
 			Name: "observe_observeMetric",
@@ -710,29 +736,22 @@ func observeMetric(address string) func(t *testing.T) {
 			},
 		}
 
-		err = client.Call("metrics.Declare", nc, &ret)
+		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
-		ret = false
+		assert.True(t, declareResp.Msg.GetOk())
 
-		assert.NoError(t, client.Call("metrics.Observe", metrics.Metric{
-			Name:   "observe_observeMetric",
-			Value:  100.0,
-			Labels: []string{"test", "test2"},
-		}, &ret))
-		assert.True(t, ret)
+		obsResp, err := client.Observe(ctx, connect.NewRequest(&metricsV1.ObserveRequest{
+			Metric: &metricsV1.Metric{Name: "observe_observeMetric", Value: 100.0, Labels: []string{"test", "test2"}},
+		}))
+		assert.NoError(t, err)
+		assert.True(t, obsResp.Msg.GetOk())
 	}
 }
 
 func counterMetric(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
-		assert.NoError(t, err)
-		defer func() {
-			_ = conn.Close()
-		}()
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
+		client := newMetricsClient(address)
+		ctx := t.Context()
 
 		nc := metrics.NamedCollector{
 			Name: "counter_CounterMetric",
@@ -745,30 +764,22 @@ func counterMetric(address string) func(t *testing.T) {
 			},
 		}
 
-		err = client.Call("metrics.Declare", nc, &ret)
+		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
+		assert.True(t, declareResp.Msg.GetOk())
 
-		ret = false
-
-		assert.NoError(t, client.Call("metrics.Add", metrics.Metric{
-			Name:   "counter_CounterMetric",
-			Value:  100.0,
-			Labels: []string{"type2", "section2"},
-		}, &ret))
-		assert.True(t, ret)
+		addResp, err := client.Add(ctx, connect.NewRequest(&metricsV1.AddRequest{
+			Metric: &metricsV1.Metric{Name: "counter_CounterMetric", Value: 100.0, Labels: []string{"type2", "section2"}},
+		}))
+		assert.NoError(t, err)
+		assert.True(t, addResp.Msg.GetOk())
 	}
 }
 
 func registerHistogram(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
-		assert.NoError(t, err)
-		defer func() {
-			_ = conn.Close()
-		}()
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
+		client := newMetricsClient(address)
+		ctx := t.Context()
 
 		nc := metrics.NamedCollector{
 			Name: "histogram_registerHistogram",
@@ -779,34 +790,22 @@ func registerHistogram(address string) func(t *testing.T) {
 			},
 		}
 
-		err = client.Call("metrics.Declare", nc, &ret)
+		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
+		assert.True(t, declareResp.Msg.GetOk())
 
-		ret = false
-
-		m := metrics.Metric{
-			Name:   "histogram_registerHistogram",
-			Value:  10000,
-			Labels: nil,
-		}
-
-		err = client.Call("metrics.Add", m, &ret)
+		// Histogram doesn't support Add — must surface as an error.
+		_, err = client.Add(ctx, connect.NewRequest(&metricsV1.AddRequest{
+			Metric: &metricsV1.Metric{Name: "histogram_registerHistogram", Value: 10000},
+		}))
 		assert.Error(t, err)
-		assert.False(t, ret)
 	}
 }
 
 func subVector(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
-		assert.NoError(t, err)
-		defer func() {
-			_ = conn.Close()
-		}()
-
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
+		client := newMetricsClient(address)
+		ctx := t.Context()
 
 		nc := metrics.NamedCollector{
 			Name: "sub_gauge_subVector",
@@ -818,43 +817,28 @@ func subVector(address string) func(t *testing.T) {
 			},
 		}
 
-		err = client.Call("metrics.Declare", nc, &ret)
+		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
-		ret = false
+		assert.True(t, declareResp.Msg.GetOk())
 
-		m := metrics.Metric{
-			Name:   "sub_gauge_subVector",
-			Value:  100000,
-			Labels: []string{"core", "first"},
-		}
-
-		err = client.Call("metrics.Add", m, &ret)
+		addResp, err := client.Add(ctx, connect.NewRequest(&metricsV1.AddRequest{
+			Metric: &metricsV1.Metric{Name: "sub_gauge_subVector", Value: 100000, Labels: []string{"core", "first"}},
+		}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
-		ret = false
+		assert.True(t, addResp.Msg.GetOk())
 
-		m = metrics.Metric{
-			Name:   "sub_gauge_subVector",
-			Value:  99999,
-			Labels: []string{"core", "first"},
-		}
-
-		err = client.Call("metrics.Sub", m, &ret)
+		subResp, err := client.Sub(ctx, connect.NewRequest(&metricsV1.SubRequest{
+			Metric: &metricsV1.Metric{Name: "sub_gauge_subVector", Value: 99999, Labels: []string{"core", "first"}},
+		}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
+		assert.True(t, subResp.Msg.GetOk())
 	}
 }
 
 func subMetric(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
-		assert.NoError(t, err)
-		defer func() {
-			_ = conn.Close()
-		}()
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
+		client := newMetricsClient(address)
+		ctx := t.Context()
 
 		nc := metrics.NamedCollector{
 			Name: "sub_gauge_subMetric",
@@ -865,41 +849,28 @@ func subMetric(address string) func(t *testing.T) {
 			},
 		}
 
-		err = client.Call("metrics.Declare", nc, &ret)
+		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
-		ret = false
+		assert.True(t, declareResp.Msg.GetOk())
 
-		m := metrics.Metric{
-			Name:  "sub_gauge_subMetric",
-			Value: 100000,
-		}
-
-		err = client.Call("metrics.Add", m, &ret)
+		addResp, err := client.Add(ctx, connect.NewRequest(&metricsV1.AddRequest{
+			Metric: &metricsV1.Metric{Name: "sub_gauge_subMetric", Value: 100000},
+		}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
-		ret = false
+		assert.True(t, addResp.Msg.GetOk())
 
-		m = metrics.Metric{
-			Name:  "sub_gauge_subMetric",
-			Value: 99999,
-		}
-
-		err = client.Call("metrics.Sub", m, &ret)
+		subResp, err := client.Sub(ctx, connect.NewRequest(&metricsV1.SubRequest{
+			Metric: &metricsV1.Metric{Name: "sub_gauge_subMetric", Value: 99999},
+		}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
+		assert.True(t, subResp.Msg.GetOk())
 	}
 }
 
 func setOnHistogram(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
-		assert.NoError(t, err)
-		defer func() {
-			_ = conn.Close()
-		}()
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
+		client := newMetricsClient(address)
+		ctx := t.Context()
 
 		nc := metrics.NamedCollector{
 			Name: "histogram_setOnHistogram",
@@ -911,32 +882,22 @@ func setOnHistogram(address string) func(t *testing.T) {
 			},
 		}
 
-		err = client.Call("metrics.Declare", nc, &ret)
+		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
+		assert.True(t, declareResp.Msg.GetOk())
 
-		ret = false
-
-		m := metrics.Metric{
-			Name:  "gauge_setOnHistogram",
-			Value: 100.0,
-		}
-
-		err = client.Call("metrics.Set", m, &ret) // expected 2 label values but got 1 in []string{"missing"}
+		// Histogram does not support Set — must surface as an error.
+		_, err = client.Set(ctx, connect.NewRequest(&metricsV1.SetRequest{
+			Metric: &metricsV1.Metric{Name: "gauge_setOnHistogram", Value: 100.0},
+		}))
 		assert.Error(t, err)
-		assert.False(t, ret)
 	}
 }
 
 func setWithoutLabels(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
-		assert.NoError(t, err)
-		defer func() {
-			_ = conn.Close()
-		}()
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
+		client := newMetricsClient(address)
+		ctx := t.Context()
 
 		nc := metrics.NamedCollector{
 			Name: "gauge_setWithoutLabels",
@@ -948,32 +909,22 @@ func setWithoutLabels(address string) func(t *testing.T) {
 			},
 		}
 
-		err = client.Call("metrics.Declare", nc, &ret)
+		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
+		assert.True(t, declareResp.Msg.GetOk())
 
-		ret = false
-
-		m := metrics.Metric{
-			Name:  "gauge_setWithoutLabels",
-			Value: 100.0,
-		}
-
-		err = client.Call("metrics.Set", m, &ret) // expected 2 label values but got 1 in []string{"missing"}
+		// GaugeVec requires labels — Set with empty labels must error.
+		_, err = client.Set(ctx, connect.NewRequest(&metricsV1.SetRequest{
+			Metric: &metricsV1.Metric{Name: "gauge_setWithoutLabels", Value: 100.0},
+		}))
 		assert.Error(t, err)
-		assert.False(t, ret)
 	}
 }
 
 func missingSection(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
-		assert.NoError(t, err)
-		defer func() {
-			_ = conn.Close()
-		}()
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
+		client := newMetricsClient(address)
+		ctx := t.Context()
 
 		nc := metrics.NamedCollector{
 			Name: "gauge_missing_section_collector",
@@ -985,33 +936,23 @@ func missingSection(address string) func(t *testing.T) {
 			},
 		}
 
-		err = client.Call("metrics.Declare", nc, &ret)
+		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
+		assert.True(t, declareResp.Msg.GetOk())
 
-		ret = false
-
-		m := metrics.Metric{
-			Name:   "gauge_missing_section_collector",
-			Value:  100.0,
-			Labels: []string{"missing"},
-		}
-
-		err = client.Call("metrics.Set", m, &ret) // expected 2 label values but got 1 in []string{"missing"}
+		// Two-label collector with one label value — prometheus rejects the
+		// call, surfaces as an error on the wire.
+		_, err = client.Set(ctx, connect.NewRequest(&metricsV1.SetRequest{
+			Metric: &metricsV1.Metric{Name: "gauge_missing_section_collector", Value: 100.0, Labels: []string{"missing"}},
+		}))
 		assert.Error(t, err)
-		assert.False(t, ret)
 	}
 }
 
 func vectorMetric(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
-		assert.NoError(t, err)
-		defer func() {
-			_ = conn.Close()
-		}()
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
+		client := newMetricsClient(address)
+		ctx := t.Context()
 
 		nc := metrics.NamedCollector{
 			Name: "gauge_2_collector",
@@ -1023,33 +964,22 @@ func vectorMetric(address string) func(t *testing.T) {
 			},
 		}
 
-		err = client.Call("metrics.Declare", nc, &ret)
+		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
+		assert.True(t, declareResp.Msg.GetOk())
 
-		ret = false
-
-		m := metrics.Metric{
-			Name:   "gauge_2_collector",
-			Value:  100.0,
-			Labels: []string{"core", "first"},
-		}
-
-		err = client.Call("metrics.Set", m, &ret)
+		setResp, err := client.Set(ctx, connect.NewRequest(&metricsV1.SetRequest{
+			Metric: &metricsV1.Metric{Name: "gauge_2_collector", Value: 100.0, Labels: []string{"core", "first"}},
+		}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
+		assert.True(t, setResp.Msg.GetOk())
 	}
 }
 
 func setMetric(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
-		assert.NoError(t, err)
-		defer func() {
-			_ = conn.Close()
-		}()
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
+		client := newMetricsClient(address)
+		ctx := t.Context()
 
 		nc := metrics.NamedCollector{
 			Name: "user_gauge_collector",
@@ -1060,55 +990,32 @@ func setMetric(address string) func(t *testing.T) {
 			},
 		}
 
-		err = client.Call("metrics.Declare", nc, &ret)
+		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
-		ret = false
+		assert.True(t, declareResp.Msg.GetOk())
 
-		m := metrics.Metric{
-			Name:  "user_gauge_collector",
-			Value: 100.0,
-		}
-
-		err = client.Call("metrics.Set", m, &ret)
+		setResp, err := client.Set(ctx, connect.NewRequest(&metricsV1.SetRequest{
+			Metric: &metricsV1.Metric{Name: "user_gauge_collector", Value: 100.0},
+		}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
+		assert.True(t, setResp.Msg.GetOk())
 	}
 }
 
 func addMetricsTest(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
+		client := newMetricsClient(address)
+		addResp, err := client.Add(t.Context(), connect.NewRequest(&metricsV1.AddRequest{
+			Metric: &metricsV1.Metric{Name: "test_metrics_named_collector", Value: 10000},
+		}))
 		assert.NoError(t, err)
-		defer func() {
-			_ = conn.Close()
-		}()
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
-
-		m := metrics.Metric{
-			Name:   "test_metrics_named_collector",
-			Value:  10000,
-			Labels: nil,
-		}
-
-		err = client.Call("metrics.Add", m, &ret)
-		assert.NoError(t, err)
-		assert.True(t, ret)
+		assert.True(t, addResp.Msg.GetOk())
 	}
 }
 
 func declareMetricsTest(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
-		assert.NoError(t, err)
-
-		defer func() {
-			_ = conn.Close()
-		}()
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
-
+		client := newMetricsClient(address)
 		nc := metrics.NamedCollector{
 			Name: "test_metrics_named_collector",
 			Collector: metrics.Collector{
@@ -1116,36 +1023,27 @@ func declareMetricsTest(address string) func(t *testing.T) {
 				Subsystem: "default",
 				Type:      metrics.Counter,
 				Help:      "NO HELP!",
-				Labels:    nil,
-				Buckets:   nil,
 			},
 		}
 
-		err = client.Call("metrics.Declare", nc, &ret)
+		declareResp, err := client.Declare(t.Context(), connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
 		assert.NoError(t, err)
-		assert.True(t, ret)
+		assert.True(t, declareResp.Msg.GetOk())
 	}
 }
 
 func unregisterMetric(name string, address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		conn, err := net.Dial(dialNetwork, address)
+		client := newMetricsClient(address)
+		resp, err := client.Unregister(t.Context(), connect.NewRequest(&metricsV1.UnregisterRequest{Name: name}))
 		assert.NoError(t, err)
-		defer func() {
-			_ = conn.Close()
-		}()
-		client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
-		var ret bool
-
-		err = client.Call("metrics.Unregister", name, &ret)
-		assert.NoError(t, err)
-		assert.True(t, ret)
+		assert.True(t, resp.Msg.GetOk())
 	}
 }
 
 func echoHTTP(port string) func(t *testing.T) {
 	return func(t *testing.T) {
-		req, err := http.NewRequest("GET", "http://127.0.0.1:"+port, nil)
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://127.0.0.1:"+port, nil)
 		assert.NoError(t, err)
 
 		r, err := http.DefaultClient.Do(req)
@@ -1160,7 +1058,11 @@ func echoHTTP(port string) func(t *testing.T) {
 
 // get request and return body
 func get(address string) (string, error) {
-	r, err := http.Get(address) //nolint:gosec
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, address, nil)
+	if err != nil {
+		return "", err
+	}
+	r, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -1180,7 +1082,11 @@ func get(address string) (string, error) {
 
 // get request and return body
 func getIPV6(address string) (string, error) {
-	r, err := http.Get(address) //nolint:gosec
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, address, nil)
+	if err != nil {
+		return "", err
+	}
+	r, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}

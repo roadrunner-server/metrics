@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/roadrunner-server/api-go/v6/metrics/v1/metricsV1connect"
 	"github.com/roadrunner-server/endure/v2/dep"
 	"github.com/roadrunner-server/errors"
 	"golang.org/x/sys/cpu"
@@ -261,10 +262,7 @@ func (p *Plugin) Name() string {
 	return PluginName
 }
 
-// RPC interface satisfaction
-func (p *Plugin) RPC() any {
-	return &rpc{
-		p:   p,
-		log: p.log,
-	}
+// RPC returns the Connect-RPC handler mount for the metrics service.
+func (p *Plugin) RPC() (string, http.Handler) {
+	return metricsV1connect.NewMetricsServiceHandler(&rpc{p: p, log: p.log})
 }
