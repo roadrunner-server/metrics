@@ -37,7 +37,7 @@ func (r *rpc) Add(_ context.Context, req *connect.Request[metricsV1.AddRequest])
 	case prometheus.Gauge:
 		c.Add(m.GetValue())
 	case *prometheus.GaugeVec:
-		gv, err := vecMetric(c, m)
+		gv, err := vecMetric(r, c, m)
 		if err != nil {
 			return nil, err
 		}
@@ -45,7 +45,7 @@ func (r *rpc) Add(_ context.Context, req *connect.Request[metricsV1.AddRequest])
 	case prometheus.Counter:
 		c.Add(m.GetValue())
 	case *prometheus.CounterVec:
-		cv, err := vecMetric(c, m)
+		cv, err := vecMetric(r, c, m)
 		if err != nil {
 			return nil, err
 		}
@@ -55,12 +55,13 @@ func (r *rpc) Add(_ context.Context, req *connect.Request[metricsV1.AddRequest])
 			fmt.Errorf("%w: %s does not support Add", errUnsupportedOpForCol, m.GetName()))
 	}
 
+	r.log.Debug("metric successfully added", "name", m.GetName(), "labels", m.GetLabels(), "value", m.GetValue())
 	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
 }
 
 func (r *rpc) Sub(_ context.Context, req *connect.Request[metricsV1.SubRequest]) (*connect.Response[metricsV1.Response], error) {
 	m := req.Msg.GetMetric()
-	r.log.Debug("subtracting metric", "name", m.GetName(), "value", m.GetValue(), "labels", m.GetLabels())
+	r.log.Debug("subtracting value from metric", "name", m.GetName(), "value", m.GetValue(), "labels", m.GetLabels())
 
 	col, code, err := r.lookupCollector(m.GetName())
 	if err != nil {
@@ -71,7 +72,7 @@ func (r *rpc) Sub(_ context.Context, req *connect.Request[metricsV1.SubRequest])
 	case prometheus.Gauge:
 		c.Sub(m.GetValue())
 	case *prometheus.GaugeVec:
-		gv, err := vecMetric(c, m)
+		gv, err := vecMetric(r, c, m)
 		if err != nil {
 			return nil, err
 		}
@@ -81,6 +82,7 @@ func (r *rpc) Sub(_ context.Context, req *connect.Request[metricsV1.SubRequest])
 			fmt.Errorf("%w: %s does not support Sub", errUnsupportedOpForCol, m.GetName()))
 	}
 
+	r.log.Debug("subtracting operation finished successfully", "name", m.GetName(), "labels", m.GetLabels(), "value", m.GetValue())
 	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
 }
 
@@ -97,13 +99,13 @@ func (r *rpc) Observe(_ context.Context, req *connect.Request[metricsV1.ObserveR
 	case prometheus.Histogram:
 		c.Observe(m.GetValue())
 	case *prometheus.HistogramVec:
-		ov, err := vecObserver(c, m)
+		ov, err := vecMetric[prometheus.Observer](r, c, m)
 		if err != nil {
 			return nil, err
 		}
 		ov.Observe(m.GetValue())
 	case *prometheus.SummaryVec:
-		ov, err := vecObserver(c, m)
+		ov, err := vecMetric[prometheus.Observer](r, c, m)
 		if err != nil {
 			return nil, err
 		}
@@ -113,6 +115,7 @@ func (r *rpc) Observe(_ context.Context, req *connect.Request[metricsV1.ObserveR
 			fmt.Errorf("%w: %s does not support Observe", errUnsupportedOpForCol, m.GetName()))
 	}
 
+	r.log.Debug("observe operation finished successfully", "name", m.GetName(), "labels", m.GetLabels(), "value", m.GetValue())
 	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
 }
 
@@ -129,7 +132,7 @@ func (r *rpc) Set(_ context.Context, req *connect.Request[metricsV1.SetRequest])
 	case prometheus.Gauge:
 		c.Set(m.GetValue())
 	case *prometheus.GaugeVec:
-		gv, err := vecMetric(c, m)
+		gv, err := vecMetric(r, c, m)
 		if err != nil {
 			return nil, err
 		}
@@ -139,6 +142,7 @@ func (r *rpc) Set(_ context.Context, req *connect.Request[metricsV1.SetRequest])
 			fmt.Errorf("%w: %s does not support Set", errUnsupportedOpForCol, m.GetName()))
 	}
 
+	r.log.Debug("set operation finished successfully", "name", m.GetName(), "labels", m.GetLabels(), "value", m.GetValue())
 	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
 }
 
@@ -149,7 +153,7 @@ func (r *rpc) Declare(_ context.Context, req *connect.Request[metricsV1.DeclareR
 	r.p.mu.Lock()
 	defer r.p.mu.Unlock()
 
-	r.log.Debug("declaring metric", "name", nc.GetName(), "type", nc.GetCollector().GetType(), "namespace", nc.GetCollector().GetNamespace())
+	r.log.Debug("declaring new metric", "name", nc.GetName(), "type", nc.GetCollector().GetType(), "namespace", nc.GetCollector().GetNamespace())
 	if _, exist := r.p.collectors.Load(nc.GetName()); exist {
 		r.log.Warn("metric with provided name already exist", "name", nc.GetName())
 		return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
@@ -165,7 +169,7 @@ func (r *rpc) Declare(_ context.Context, req *connect.Request[metricsV1.DeclareR
 	}
 
 	r.p.collectors.Store(nc.GetName(), &collector{col: promCol, registered: true})
-	r.log.Debug("metric registered", "name", nc.GetName())
+	r.log.Debug("metric successfully added", "name", nc.GetName(), "type", nc.GetCollector().GetType(), "namespace", nc.GetCollector().GetNamespace())
 	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
 }
 
@@ -183,10 +187,10 @@ func (r *rpc) Unregister(_ context.Context, req *connect.Request[metricsV1.Unreg
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("collectors map held non-*collector for %s", name))
 	}
 	if r.p.registry.Unregister(col.col) {
-		r.log.Debug("collector unregistered", "name", name)
+		r.log.Debug("collector was successfully unregistered", "name", name)
 		return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
 	}
-	r.log.Debug("collector deleted from RR but not from prometheus registry", "name", name)
+	r.log.Debug("collector was deleted from the RR registry but not from the prometheus collector", "name", name)
 	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
 }
 
@@ -203,25 +207,21 @@ func (r *rpc) lookupCollector(name string) (prometheus.Collector, connect.Code, 
 	return col.col, 0, nil
 }
 
-func vecMetric[T interface {
+func vecMetric[V any, T interface {
 	GetMetricWithLabelValues(lvs ...string) (V, error)
-}, V any](c T, m *metricsV1.Metric) (V, error) {
+}](r *rpc, c T, m *metricsV1.Metric) (V, error) {
 	var zero V
 	if len(m.GetLabels()) == 0 {
+		r.log.Error("required labels for collector", "collector", m.GetName())
 		return zero, connect.NewError(connect.CodeInvalidArgument,
 			fmt.Errorf("%w: %s", errRequiredLabels, m.GetName()))
 	}
 	v, err := c.GetMetricWithLabelValues(m.GetLabels()...)
 	if err != nil {
-		return zero, connect.NewError(connect.CodeInternal, err)
+		r.log.Error("failed to get metrics with label values", "collector", m.GetName(), "labels", m.GetLabels())
+		return zero, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	return v, nil
-}
-
-func vecObserver[T interface {
-	GetMetricWithLabelValues(lvs ...string) (prometheus.Observer, error)
-}](c T, m *metricsV1.Metric) (prometheus.Observer, error) {
-	return vecMetric[T, prometheus.Observer](c, m)
 }
 
 func buildPromCollector(nc *metricsV1.NamedCollector) (prometheus.Collector, error) {

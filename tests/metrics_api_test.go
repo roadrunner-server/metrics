@@ -145,6 +145,38 @@ func TestMetricsConnectAPI(t *testing.T) {
 	_, err = client.Unregister(ctx, connect.NewRequest(&metricsV1.UnregisterRequest{Name: "missing"}))
 	require.Error(t, err)
 	require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+
+	// Declare with an unspecified collector type → CodeInvalidArgument (the
+	// zero value when the proto Type field is omitted).
+	_, err = client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{
+		Collector: &metricsV1.NamedCollector{
+			Name:      "api_unspecified",
+			Collector: &metricsV1.Collector{Help: "no type"},
+		},
+	}))
+	require.Error(t, err)
+	require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+
+	// SummaryVec Observe — declare a summary with labels + objectives, then
+	// observe with the right label values. Locks in the SummaryVec branch of
+	// the rpc.go Observe type-switch.
+	_, err = client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{
+		Collector: &metricsV1.NamedCollector{
+			Name: "api_summary_vec",
+			Collector: &metricsV1.Collector{
+				Type:       metricsV1.CollectorType_COLLECTOR_TYPE_SUMMARY,
+				Help:       "API test summary",
+				Labels:     []string{"region"},
+				Objectives: []*metricsV1.Objective{{Quantile: 0.5, Error: 0.05}, {Quantile: 0.99, Error: 0.001}},
+			},
+		},
+	}))
+	require.NoError(t, err)
+	obsResp, err := client.Observe(ctx, connect.NewRequest(&metricsV1.ObserveRequest{
+		Metric: &metricsV1.Metric{Name: "api_summary_vec", Value: 0.42, Labels: []string{"eu"}},
+	}))
+	require.NoError(t, err)
+	require.True(t, obsResp.Msg.GetOk())
 }
 
 // TestMetricsHTTPApi exercises the metrics RPCs through plain HTTP/1.1 with

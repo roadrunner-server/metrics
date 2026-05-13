@@ -4,7 +4,7 @@ rpc:
   listen: tcp://127.0.0.1:6001
 
 metrics:
-  address: "127.0.0.1:2115"
+  address: "127.0.0.1:2118"
   collect:
     app_metric_counter:
       type: counter
