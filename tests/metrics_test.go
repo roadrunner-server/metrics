@@ -111,12 +111,10 @@ func TestMetricsInit(t *testing.T) {
 	assert.Contains(t, out, "app_metric_counter")
 
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
 
 	stopCh := make(chan struct{}, 1)
 
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for {
 			select {
 			case e := <-ch:
@@ -136,7 +134,7 @@ func TestMetricsInit(t *testing.T) {
 				return
 			}
 		}
-	}()
+	})
 
 	stopCh <- struct{}{}
 	wg.Wait()
@@ -213,12 +211,10 @@ func TestMetricsGaugeCollector(t *testing.T) {
 	assert.Contains(t, out, "go_gc_duration_seconds")
 
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
 
 	stopCh := make(chan struct{}, 1)
 
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for {
 			select {
 			case e := <-ch:
@@ -238,7 +234,7 @@ func TestMetricsGaugeCollector(t *testing.T) {
 				return
 			}
 		}
-	}()
+	})
 
 	stopCh <- struct{}{}
 	wg.Wait()
@@ -273,12 +269,10 @@ func TestMetricsDifferentRPCCalls(t *testing.T) {
 	signal.Notify(sig, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
 
 	stopCh := make(chan struct{}, 1)
 
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for {
 			select {
 			case e := <-ch:
@@ -298,7 +292,7 @@ func TestMetricsDifferentRPCCalls(t *testing.T) {
 				return
 			}
 		}
-	}()
+	})
 
 	address := "127.0.0.1:6002"
 	time.Sleep(time.Second * 2)
@@ -420,11 +414,9 @@ func TestHTTPMetrics(t *testing.T) {
 
 	tt := time.NewTimer(time.Minute * 3)
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
 
-	go func() {
+	wg.Go(func() {
 		defer tt.Stop()
-		defer wg.Done()
 		for {
 			select {
 			case e := <-ch:
@@ -444,7 +436,7 @@ func TestHTTPMetrics(t *testing.T) {
 				return
 			}
 		}
-	}()
+	})
 
 	time.Sleep(time.Second * 2)
 	t.Run("req1", echoHTTP("13223"))
@@ -566,12 +558,10 @@ func TestUnregister(t *testing.T) {
 	signal.Notify(sig, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
 
 	stopCh := make(chan struct{}, 1)
 
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for {
 			select {
 			case e := <-ch:
@@ -591,7 +581,7 @@ func TestUnregister(t *testing.T) {
 				return
 			}
 		}
-	}()
+	})
 
 	address := "127.0.0.1:6005"
 	time.Sleep(time.Second * 2)
@@ -641,12 +631,10 @@ func TestUpsertOfMetricsDeclaration(t *testing.T) {
 	signal.Notify(sig, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
 
 	stopCh := make(chan struct{}, 1)
 
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for {
 			select {
 			case e := <-ch:
@@ -666,7 +654,7 @@ func TestUpsertOfMetricsDeclaration(t *testing.T) {
 				return
 			}
 		}
-	}()
+	})
 
 	address := "127.0.0.1:6005"
 	time.Sleep(time.Second * 2)
