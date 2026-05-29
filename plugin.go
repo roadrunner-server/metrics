@@ -2,8 +2,7 @@ package metrics
 
 import (
 	"context"
-	"crypto/tls"
-	stderr "errors"
+	"errors"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -14,8 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/roadrunner-server/api-go/v6/metrics/v1/metricsV1connect"
 	"github.com/roadrunner-server/endure/v2/dep"
-	"github.com/roadrunner-server/errors"
-	"golang.org/x/sys/cpu"
+	rrerrors "github.com/roadrunner-server/errors"
 )
 
 const (
@@ -62,14 +60,14 @@ type StatProvider interface {
 
 // Init service.
 func (p *Plugin) Init(cfg Configurer, log Logger) error {
-	const op = errors.Op("metrics_plugin_init")
+	const op = rrerrors.Op("metrics_plugin_init")
 	if !cfg.Has(PluginName) {
-		return errors.E(op, errors.Disabled)
+		return rrerrors.E(op, rrerrors.Disabled)
 	}
 
 	err := cfg.UnmarshalKey(PluginName, &p.cfg)
 	if err != nil {
-		return errors.E(op, errors.Disabled, err)
+		return rrerrors.E(op, rrerrors.Disabled, err)
 	}
 
 	p.cfg.InitDefaults()
@@ -80,26 +78,24 @@ func (p *Plugin) Init(cfg Configurer, log Logger) error {
 	// Default
 	err = p.registry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	if err != nil {
-		return errors.E(op, err)
+		return rrerrors.E(op, err)
 	}
 
 	// Default
 	err = p.registry.Register(collectors.NewGoCollector())
 	if err != nil {
-		return errors.E(op, err)
+		return rrerrors.E(op, err)
 	}
 
 	cl, err := p.cfg.getCollectors()
 	if err != nil {
-		return errors.E(op, err)
+		return rrerrors.E(op, err)
 	}
 
 	// Register invocation will be later in the Serve method
 	for k, v := range cl {
 		p.collectors.Store(k, v)
 	}
-
-	p.statProviders = make([]StatProvider, 0, 2)
 
 	return nil
 }
@@ -110,14 +106,13 @@ func (p *Plugin) Register(c prometheus.Collector) error {
 }
 
 // Serve prometheus metrics service.
-func (p *Plugin) Serve() chan error { //nolint:gocyclo
+func (p *Plugin) Serve() chan error {
 	errCh := make(chan error, 1)
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	// register Collected stat providers
-	for i := range p.statProviders {
-		sp := p.statProviders[i]
+	for _, sp := range p.statProviders {
 		for _, c := range sp.MetricsCollector() {
 			err := p.registry.Register(c)
 			if err != nil {
@@ -146,54 +141,6 @@ func (p *Plugin) Serve() chan error { //nolint:gocyclo
 		return true
 	})
 
-	var topCipherSuites []uint16
-	var defaultCipherSuitesTLS13 []uint16
-
-	hasGCMAsmAMD64 := cpu.X86.HasAES && cpu.X86.HasPCLMULQDQ
-	hasGCMAsmARM64 := cpu.ARM64.HasAES && cpu.ARM64.HasPMULL
-	// Keep in sync with crypto/aes/cipher_s390x.go.
-	hasGCMAsmS390X := cpu.S390X.HasAES && cpu.S390X.HasAESCBC && cpu.S390X.HasAESCTR && (cpu.S390X.HasGHASH || cpu.S390X.HasAESGCM)
-
-	hasGCMAsm := hasGCMAsmAMD64 || hasGCMAsmARM64 || hasGCMAsmS390X
-
-	if hasGCMAsm {
-		// If AES-GCM hardware is provided, then prioritize AES-GCM
-		// cipher suites.
-		topCipherSuites = []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-		}
-		defaultCipherSuitesTLS13 = []uint16{
-			tls.TLS_AES_128_GCM_SHA256,
-			tls.TLS_CHACHA20_POLY1305_SHA256,
-			tls.TLS_AES_256_GCM_SHA384,
-		}
-	} else {
-		// Without AES-GCM hardware, we put the ChaCha20-Poly1305
-		// cipher suites first.
-		topCipherSuites = []uint16{
-			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-		}
-		defaultCipherSuitesTLS13 = []uint16{
-			tls.TLS_CHACHA20_POLY1305_SHA256,
-			tls.TLS_AES_128_GCM_SHA256,
-			tls.TLS_AES_256_GCM_SHA384,
-		}
-	}
-
-	DefaultCipherSuites := make([]uint16, 0, 22)
-	DefaultCipherSuites = append(DefaultCipherSuites, topCipherSuites...)
-	DefaultCipherSuites = append(DefaultCipherSuites, defaultCipherSuitesTLS13...)
-
 	p.http = &http.Server{
 		Addr:              p.cfg.Address,
 		Handler:           promhttp.HandlerFor(p.registry, promhttp.HandlerOpts{}),
@@ -202,23 +149,12 @@ func (p *Plugin) Serve() chan error { //nolint:gocyclo
 		MaxHeaderBytes:    maxHeaderSize,
 		ReadHeaderTimeout: time.Minute * 2,
 		WriteTimeout:      time.Minute * 2,
-		TLSConfig: &tls.Config{
-			CurvePreferences: []tls.CurveID{
-				tls.X25519,
-				tls.CurveP256,
-				tls.CurveP384,
-				tls.CurveP521,
-			},
-			CipherSuites: DefaultCipherSuites,
-			MinVersion:   tls.VersionTLS12,
-		},
 	}
 
 	go func() {
 		err := p.http.ListenAndServe()
-		if err != nil && !stderr.Is(err, http.ErrServerClosed) {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
-			return
 		}
 	}()
 
@@ -230,18 +166,14 @@ func (p *Plugin) Weight() uint {
 }
 
 // Stop prometheus metrics service.
-func (p *Plugin) Stop(context.Context) error {
+func (p *Plugin) Stop(ctx context.Context) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	if p.http != nil {
-		// timeout is 10 seconds
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
 		err := p.http.Shutdown(ctx)
 		if err != nil {
-			// Function should be Stop() error
-			p.log.Error("stop error", "error", errors.Errorf("error shutting down the metrics server: error %v", err))
+			return rrerrors.Errorf("error shutting down the metrics server: error %v", err)
 		}
 	}
 	return nil
