@@ -2,21 +2,21 @@ package metrics
 
 import (
 	"context"
-	stderr "errors"
+	"errors"
 	"fmt"
 	"log/slog"
 
 	"connectrpc.com/connect"
 	"github.com/prometheus/client_golang/prometheus"
 	metricsV1 "github.com/roadrunner-server/api-go/v6/metrics/v1"
-	"github.com/roadrunner-server/errors"
+	rrerrors "github.com/roadrunner-server/errors"
 )
 
 var (
-	errUndefinedCollector  = stderr.New("undefined collector")
-	errRequiredLabels      = stderr.New("required labels for collector")
-	errUnsupportedOpForCol = stderr.New("collector does not support the requested operation")
-	errUnknownCollectorTyp = stderr.New("unknown collector type")
+	errUndefinedCollector  = errors.New("undefined collector")
+	errRequiredLabels      = errors.New("required labels for collector")
+	errUnsupportedOpForCol = errors.New("collector does not support the requested operation")
+	errUnknownCollectorTyp = errors.New("unknown collector type")
 )
 
 type rpc struct {
@@ -151,7 +151,7 @@ func (r *rpc) Set(_ context.Context, req *connect.Request[metricsV1.SetRequest])
 }
 
 func (r *rpc) Declare(_ context.Context, req *connect.Request[metricsV1.DeclareRequest]) (*connect.Response[metricsV1.Response], error) {
-	const op = errors.Op("metrics_rpc_declare")
+	const op = rrerrors.Op("metrics_rpc_declare")
 
 	nc := req.Msg.GetCollector()
 	r.p.mu.Lock()
@@ -165,11 +165,11 @@ func (r *rpc) Declare(_ context.Context, req *connect.Request[metricsV1.DeclareR
 
 	promCol, err := buildPromCollector(nc)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.E(op, err))
+		return nil, connect.NewError(connect.CodeInvalidArgument, rrerrors.E(op, err))
 	}
 
 	if err := r.p.Register(promCol); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.E(op, err))
+		return nil, connect.NewError(connect.CodeInternal, rrerrors.E(op, err))
 	}
 
 	r.p.collectors.Store(nc.GetName(), &collector{col: promCol, registered: true})
@@ -253,9 +253,12 @@ func buildPromCollector(nc *metricsV1.NamedCollector) (prometheus.Collector, err
 		}
 		return prometheus.NewCounter(opts), nil
 	case metricsV1.CollectorType_COLLECTOR_TYPE_SUMMARY:
-		objectives := make(map[float64]float64, len(col.GetObjectives()))
-		for _, o := range col.GetObjectives() {
-			objectives[o.GetQuantile()] = o.GetError()
+		var objectives map[float64]float64
+		if raw := col.GetObjectives(); len(raw) > 0 {
+			objectives = make(map[float64]float64, len(raw))
+			for _, o := range raw {
+				objectives[o.GetQuantile()] = o.GetError()
+			}
 		}
 		opts := prometheus.SummaryOpts{Name: nc.GetName(), Namespace: col.GetNamespace(), Subsystem: col.GetSubsystem(), Help: col.GetHelp(), Objectives: objectives}
 		if len(col.GetLabels()) != 0 {
