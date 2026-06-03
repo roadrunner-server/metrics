@@ -122,10 +122,7 @@ func (c *Config) getCollectors() (map[string]*collector, error) {
 			return nil, fmt.Errorf("invalid metric type `%s` for `%s`", m.Type, name)
 		}
 
-		collectors[name] = &collector{
-			col:        promCol,
-			registered: false,
-		}
+		collectors[name] = &collector{col: promCol}
 	}
 
 	return collectors, nil
