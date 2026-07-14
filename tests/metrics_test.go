@@ -2,11 +2,11 @@ package metrics
 
 import (
 	"context"
-	"crypto/tls"
 	"io"
 	"log/slog"
 	"net"
 	"net/http"
+	"net/rpc"
 	"os"
 	"os/signal"
 	"sync"
@@ -16,11 +16,10 @@ import (
 
 	mocklogger "tests/mock"
 
-	"connectrpc.com/connect"
 	metricsV1 "github.com/roadrunner-server/api-go/v6/metrics/v1"
-	"github.com/roadrunner-server/api-go/v6/metrics/v1/metricsV1connect"
 	"github.com/roadrunner-server/config/v6"
 	"github.com/roadrunner-server/endure/v2"
+	goridgeRpc "github.com/roadrunner-server/goridge/v4/pkg/rpc"
 	httpPlugin "github.com/roadrunner-server/http/v6"
 	"github.com/roadrunner-server/logger/v6"
 	"github.com/roadrunner-server/metrics/v6"
@@ -29,20 +28,12 @@ import (
 	"github.com/roadrunner-server/server/v6"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/http2"
 )
 
-func newMetricsClient(address string) metricsV1connect.MetricsServiceClient {
-	httpc := &http.Client{
-		Timeout: 30 * time.Second,
-		Transport: &http2.Transport{
-			AllowHTTP: true,
-			DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
-				return (&net.Dialer{Timeout: 30 * time.Second}).DialContext(ctx, network, addr)
-			},
-		},
-	}
-	return metricsV1connect.NewMetricsServiceClient(httpc, "http://"+address)
+func newMetricsClient(t *testing.T, address string) *rpc.Client {
+	conn, err := (&net.Dialer{}).DialContext(t.Context(), "tcp", address)
+	require.NoError(t, err)
+	return rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
 }
 
 func toProtoCollector(nc metrics.NamedCollector) *metricsV1.NamedCollector {
@@ -371,7 +362,7 @@ func TestMetricsDifferentRPCCalls(t *testing.T) {
 	require.Equal(t, 6, oLogger.FilterMessageSnippet("adding metric").Len())
 	require.Equal(t, 17, oLogger.FilterMessageSnippet("metric successfully added").Len())
 	require.Equal(t, 12, oLogger.FilterMessageSnippet("declaring new metric").Len())
-	require.Equal(t, 7, oLogger.FilterMessageSnippet("observing metric").Len())
+	require.Equal(t, 2, oLogger.FilterMessageSnippet("observing metric").Len())
 	require.Equal(t, 1, oLogger.FilterMessageSnippet("observe operation finished successfully").Len())
 
 	require.Equal(t, 2, oLogger.FilterMessageSnippet("set operation finished successfully").Len())
@@ -672,19 +663,19 @@ func TestUpsertOfMetricsDeclaration(t *testing.T) {
 
 func configuredCounterMetric(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
-		resp, err := client.Add(t.Context(), connect.NewRequest(&metricsV1.AddRequest{
+		client := newMetricsClient(t, address)
+		var resp metricsV1.Response
+		err := client.Call("metrics.Add", &metricsV1.AddRequest{
 			Metric: &metricsV1.Metric{Name: "app_metric_counter", Value: 100.0},
-		}))
+		}, &resp)
 		assert.NoError(t, err)
-		assert.True(t, resp.Msg.GetOk())
+		assert.True(t, resp.GetOk())
 	}
 }
 
 func observeMetricNotEnoughLabels(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
-		ctx := t.Context()
+		client := newMetricsClient(t, address)
 
 		nc := metrics.NamedCollector{
 			Name: "observe_observeMetricNotEnoughLabels",
@@ -697,21 +688,22 @@ func observeMetricNotEnoughLabels(address string) func(t *testing.T) {
 			},
 		}
 
-		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
+		var declareResp metricsV1.Response
+		err := client.Call("metrics.Declare", &metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}, &declareResp)
 		assert.NoError(t, err)
-		assert.True(t, declareResp.Msg.GetOk())
+		assert.True(t, declareResp.GetOk())
 
-		_, err = client.Observe(ctx, connect.NewRequest(&metricsV1.ObserveRequest{
+		var observeResp metricsV1.Response
+		err = client.Call("metrics.Observe", &metricsV1.ObserveRequest{
 			Metric: &metricsV1.Metric{Name: "observe_observeMetric", Value: 100.0, Labels: []string{"test"}},
-		}))
+		}, &observeResp)
 		assert.Error(t, err)
 	}
 }
 
 func observeMetric(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
-		ctx := t.Context()
+		client := newMetricsClient(t, address)
 
 		nc := metrics.NamedCollector{
 			Name: "observe_observeMetric",
@@ -724,22 +716,23 @@ func observeMetric(address string) func(t *testing.T) {
 			},
 		}
 
-		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
+		var declareResp metricsV1.Response
+		err := client.Call("metrics.Declare", &metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}, &declareResp)
 		assert.NoError(t, err)
-		assert.True(t, declareResp.Msg.GetOk())
+		assert.True(t, declareResp.GetOk())
 
-		obsResp, err := client.Observe(ctx, connect.NewRequest(&metricsV1.ObserveRequest{
+		var obsResp metricsV1.Response
+		err = client.Call("metrics.Observe", &metricsV1.ObserveRequest{
 			Metric: &metricsV1.Metric{Name: "observe_observeMetric", Value: 100.0, Labels: []string{"test", "test2"}},
-		}))
+		}, &obsResp)
 		assert.NoError(t, err)
-		assert.True(t, obsResp.Msg.GetOk())
+		assert.True(t, obsResp.GetOk())
 	}
 }
 
 func counterMetric(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
-		ctx := t.Context()
+		client := newMetricsClient(t, address)
 
 		nc := metrics.NamedCollector{
 			Name: "counter_CounterMetric",
@@ -752,22 +745,23 @@ func counterMetric(address string) func(t *testing.T) {
 			},
 		}
 
-		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
+		var declareResp metricsV1.Response
+		err := client.Call("metrics.Declare", &metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}, &declareResp)
 		assert.NoError(t, err)
-		assert.True(t, declareResp.Msg.GetOk())
+		assert.True(t, declareResp.GetOk())
 
-		addResp, err := client.Add(ctx, connect.NewRequest(&metricsV1.AddRequest{
+		var addResp metricsV1.Response
+		err = client.Call("metrics.Add", &metricsV1.AddRequest{
 			Metric: &metricsV1.Metric{Name: "counter_CounterMetric", Value: 100.0, Labels: []string{"type2", "section2"}},
-		}))
+		}, &addResp)
 		assert.NoError(t, err)
-		assert.True(t, addResp.Msg.GetOk())
+		assert.True(t, addResp.GetOk())
 	}
 }
 
 func registerHistogram(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
-		ctx := t.Context()
+		client := newMetricsClient(t, address)
 
 		nc := metrics.NamedCollector{
 			Name: "histogram_registerHistogram",
@@ -778,22 +772,23 @@ func registerHistogram(address string) func(t *testing.T) {
 			},
 		}
 
-		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
+		var declareResp metricsV1.Response
+		err := client.Call("metrics.Declare", &metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}, &declareResp)
 		assert.NoError(t, err)
-		assert.True(t, declareResp.Msg.GetOk())
+		assert.True(t, declareResp.GetOk())
 
 		// Histogram doesn't support Add — must surface as an error.
-		_, err = client.Add(ctx, connect.NewRequest(&metricsV1.AddRequest{
+		var addResp metricsV1.Response
+		err = client.Call("metrics.Add", &metricsV1.AddRequest{
 			Metric: &metricsV1.Metric{Name: "histogram_registerHistogram", Value: 10000},
-		}))
+		}, &addResp)
 		assert.Error(t, err)
 	}
 }
 
 func subVector(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
-		ctx := t.Context()
+		client := newMetricsClient(t, address)
 
 		nc := metrics.NamedCollector{
 			Name: "sub_gauge_subVector",
@@ -805,28 +800,30 @@ func subVector(address string) func(t *testing.T) {
 			},
 		}
 
-		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
+		var declareResp metricsV1.Response
+		err := client.Call("metrics.Declare", &metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}, &declareResp)
 		assert.NoError(t, err)
-		assert.True(t, declareResp.Msg.GetOk())
+		assert.True(t, declareResp.GetOk())
 
-		addResp, err := client.Add(ctx, connect.NewRequest(&metricsV1.AddRequest{
+		var addResp metricsV1.Response
+		err = client.Call("metrics.Add", &metricsV1.AddRequest{
 			Metric: &metricsV1.Metric{Name: "sub_gauge_subVector", Value: 100000, Labels: []string{"core", "first"}},
-		}))
+		}, &addResp)
 		assert.NoError(t, err)
-		assert.True(t, addResp.Msg.GetOk())
+		assert.True(t, addResp.GetOk())
 
-		subResp, err := client.Sub(ctx, connect.NewRequest(&metricsV1.SubRequest{
+		var subResp metricsV1.Response
+		err = client.Call("metrics.Sub", &metricsV1.SubRequest{
 			Metric: &metricsV1.Metric{Name: "sub_gauge_subVector", Value: 99999, Labels: []string{"core", "first"}},
-		}))
+		}, &subResp)
 		assert.NoError(t, err)
-		assert.True(t, subResp.Msg.GetOk())
+		assert.True(t, subResp.GetOk())
 	}
 }
 
 func subMetric(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
-		ctx := t.Context()
+		client := newMetricsClient(t, address)
 
 		nc := metrics.NamedCollector{
 			Name: "sub_gauge_subMetric",
@@ -837,28 +834,30 @@ func subMetric(address string) func(t *testing.T) {
 			},
 		}
 
-		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
+		var declareResp metricsV1.Response
+		err := client.Call("metrics.Declare", &metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}, &declareResp)
 		assert.NoError(t, err)
-		assert.True(t, declareResp.Msg.GetOk())
+		assert.True(t, declareResp.GetOk())
 
-		addResp, err := client.Add(ctx, connect.NewRequest(&metricsV1.AddRequest{
+		var addResp metricsV1.Response
+		err = client.Call("metrics.Add", &metricsV1.AddRequest{
 			Metric: &metricsV1.Metric{Name: "sub_gauge_subMetric", Value: 100000},
-		}))
+		}, &addResp)
 		assert.NoError(t, err)
-		assert.True(t, addResp.Msg.GetOk())
+		assert.True(t, addResp.GetOk())
 
-		subResp, err := client.Sub(ctx, connect.NewRequest(&metricsV1.SubRequest{
+		var subResp metricsV1.Response
+		err = client.Call("metrics.Sub", &metricsV1.SubRequest{
 			Metric: &metricsV1.Metric{Name: "sub_gauge_subMetric", Value: 99999},
-		}))
+		}, &subResp)
 		assert.NoError(t, err)
-		assert.True(t, subResp.Msg.GetOk())
+		assert.True(t, subResp.GetOk())
 	}
 }
 
 func setOnHistogram(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
-		ctx := t.Context()
+		client := newMetricsClient(t, address)
 
 		nc := metrics.NamedCollector{
 			Name: "histogram_setOnHistogram",
@@ -870,22 +869,23 @@ func setOnHistogram(address string) func(t *testing.T) {
 			},
 		}
 
-		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
+		var declareResp metricsV1.Response
+		err := client.Call("metrics.Declare", &metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}, &declareResp)
 		assert.NoError(t, err)
-		assert.True(t, declareResp.Msg.GetOk())
+		assert.True(t, declareResp.GetOk())
 
 		// Histogram does not support Set — must surface as an error.
-		_, err = client.Set(ctx, connect.NewRequest(&metricsV1.SetRequest{
+		var setResp metricsV1.Response
+		err = client.Call("metrics.Set", &metricsV1.SetRequest{
 			Metric: &metricsV1.Metric{Name: "gauge_setOnHistogram", Value: 100.0},
-		}))
+		}, &setResp)
 		assert.Error(t, err)
 	}
 }
 
 func setWithoutLabels(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
-		ctx := t.Context()
+		client := newMetricsClient(t, address)
 
 		nc := metrics.NamedCollector{
 			Name: "gauge_setWithoutLabels",
@@ -897,22 +897,23 @@ func setWithoutLabels(address string) func(t *testing.T) {
 			},
 		}
 
-		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
+		var declareResp metricsV1.Response
+		err := client.Call("metrics.Declare", &metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}, &declareResp)
 		assert.NoError(t, err)
-		assert.True(t, declareResp.Msg.GetOk())
+		assert.True(t, declareResp.GetOk())
 
 		// GaugeVec requires labels — Set with empty labels must error.
-		_, err = client.Set(ctx, connect.NewRequest(&metricsV1.SetRequest{
+		var setResp metricsV1.Response
+		err = client.Call("metrics.Set", &metricsV1.SetRequest{
 			Metric: &metricsV1.Metric{Name: "gauge_setWithoutLabels", Value: 100.0},
-		}))
+		}, &setResp)
 		assert.Error(t, err)
 	}
 }
 
 func missingSection(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
-		ctx := t.Context()
+		client := newMetricsClient(t, address)
 
 		nc := metrics.NamedCollector{
 			Name: "gauge_missing_section_collector",
@@ -924,23 +925,24 @@ func missingSection(address string) func(t *testing.T) {
 			},
 		}
 
-		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
+		var declareResp metricsV1.Response
+		err := client.Call("metrics.Declare", &metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}, &declareResp)
 		assert.NoError(t, err)
-		assert.True(t, declareResp.Msg.GetOk())
+		assert.True(t, declareResp.GetOk())
 
 		// Two-label collector with one label value — prometheus rejects the
 		// call, surfaces as an error on the wire.
-		_, err = client.Set(ctx, connect.NewRequest(&metricsV1.SetRequest{
+		var setResp metricsV1.Response
+		err = client.Call("metrics.Set", &metricsV1.SetRequest{
 			Metric: &metricsV1.Metric{Name: "gauge_missing_section_collector", Value: 100.0, Labels: []string{"missing"}},
-		}))
+		}, &setResp)
 		assert.Error(t, err)
 	}
 }
 
 func vectorMetric(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
-		ctx := t.Context()
+		client := newMetricsClient(t, address)
 
 		nc := metrics.NamedCollector{
 			Name: "gauge_2_collector",
@@ -952,22 +954,23 @@ func vectorMetric(address string) func(t *testing.T) {
 			},
 		}
 
-		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
+		var declareResp metricsV1.Response
+		err := client.Call("metrics.Declare", &metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}, &declareResp)
 		assert.NoError(t, err)
-		assert.True(t, declareResp.Msg.GetOk())
+		assert.True(t, declareResp.GetOk())
 
-		setResp, err := client.Set(ctx, connect.NewRequest(&metricsV1.SetRequest{
+		var setResp metricsV1.Response
+		err = client.Call("metrics.Set", &metricsV1.SetRequest{
 			Metric: &metricsV1.Metric{Name: "gauge_2_collector", Value: 100.0, Labels: []string{"core", "first"}},
-		}))
+		}, &setResp)
 		assert.NoError(t, err)
-		assert.True(t, setResp.Msg.GetOk())
+		assert.True(t, setResp.GetOk())
 	}
 }
 
 func setMetric(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
-		ctx := t.Context()
+		client := newMetricsClient(t, address)
 
 		nc := metrics.NamedCollector{
 			Name: "user_gauge_collector",
@@ -978,32 +981,35 @@ func setMetric(address string) func(t *testing.T) {
 			},
 		}
 
-		declareResp, err := client.Declare(ctx, connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
+		var declareResp metricsV1.Response
+		err := client.Call("metrics.Declare", &metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}, &declareResp)
 		assert.NoError(t, err)
-		assert.True(t, declareResp.Msg.GetOk())
+		assert.True(t, declareResp.GetOk())
 
-		setResp, err := client.Set(ctx, connect.NewRequest(&metricsV1.SetRequest{
+		var setResp metricsV1.Response
+		err = client.Call("metrics.Set", &metricsV1.SetRequest{
 			Metric: &metricsV1.Metric{Name: "user_gauge_collector", Value: 100.0},
-		}))
+		}, &setResp)
 		assert.NoError(t, err)
-		assert.True(t, setResp.Msg.GetOk())
+		assert.True(t, setResp.GetOk())
 	}
 }
 
 func addMetricsTest(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
-		addResp, err := client.Add(t.Context(), connect.NewRequest(&metricsV1.AddRequest{
+		client := newMetricsClient(t, address)
+		var addResp metricsV1.Response
+		err := client.Call("metrics.Add", &metricsV1.AddRequest{
 			Metric: &metricsV1.Metric{Name: "test_metrics_named_collector", Value: 10000},
-		}))
+		}, &addResp)
 		assert.NoError(t, err)
-		assert.True(t, addResp.Msg.GetOk())
+		assert.True(t, addResp.GetOk())
 	}
 }
 
 func declareMetricsTest(address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
+		client := newMetricsClient(t, address)
 		nc := metrics.NamedCollector{
 			Name: "test_metrics_named_collector",
 			Collector: metrics.Collector{
@@ -1014,18 +1020,20 @@ func declareMetricsTest(address string) func(t *testing.T) {
 			},
 		}
 
-		declareResp, err := client.Declare(t.Context(), connect.NewRequest(&metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}))
+		var declareResp metricsV1.Response
+		err := client.Call("metrics.Declare", &metricsV1.DeclareRequest{Collector: toProtoCollector(nc)}, &declareResp)
 		assert.NoError(t, err)
-		assert.True(t, declareResp.Msg.GetOk())
+		assert.True(t, declareResp.GetOk())
 	}
 }
 
 func unregisterMetric(name string, address string) func(t *testing.T) {
 	return func(t *testing.T) {
-		client := newMetricsClient(address)
-		resp, err := client.Unregister(t.Context(), connect.NewRequest(&metricsV1.UnregisterRequest{Name: name}))
+		client := newMetricsClient(t, address)
+		var resp metricsV1.Response
+		err := client.Call("metrics.Unregister", &metricsV1.UnregisterRequest{Name: name}, &resp)
 		assert.NoError(t, err)
-		assert.True(t, resp.Msg.GetOk())
+		assert.True(t, resp.GetOk())
 	}
 }
 

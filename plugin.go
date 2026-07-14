@@ -11,7 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/roadrunner-server/api-go/v6/metrics/v1/metricsV1connect"
 	"github.com/roadrunner-server/endure/v2/dep"
 	rrerrors "github.com/roadrunner-server/errors"
 )
@@ -194,7 +193,7 @@ func (p *Plugin) Name() string {
 	return PluginName
 }
 
-// RPC returns the Connect-RPC handler mount for the metrics service.
-func (p *Plugin) RPC() (string, http.Handler) {
-	return metricsV1connect.NewMetricsServiceHandler(&rpc{p: p, log: p.log})
+// RPC returns the net/rpc service for the metrics plugin, served over goridge.
+func (p *Plugin) RPC() any {
+	return &rpc{p: p, log: p.log}
 }

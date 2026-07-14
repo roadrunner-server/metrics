@@ -1,12 +1,10 @@
 package metrics
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 
-	"connectrpc.com/connect"
 	"github.com/prometheus/client_golang/prometheus"
 	metricsV1 "github.com/roadrunner-server/api-go/v6/metrics/v1"
 	rrerrors "github.com/roadrunner-server/errors"
@@ -24,13 +22,13 @@ type rpc struct {
 	log *slog.Logger
 }
 
-func (r *rpc) Add(_ context.Context, req *connect.Request[metricsV1.AddRequest]) (*connect.Response[metricsV1.Response], error) {
-	m := req.Msg.GetMetric()
+func (r *rpc) Add(in *metricsV1.AddRequest, out *metricsV1.Response) error {
+	m := in.GetMetric()
 	r.log.Debug("adding metric", "name", m.GetName(), "value", m.GetValue(), "labels", m.GetLabels())
 
-	col, code, err := r.lookupCollector(m.GetName())
+	col, err := r.lookupCollector(m.GetName())
 	if err != nil {
-		return nil, connect.NewError(code, err)
+		return err
 	}
 
 	switch c := col.(type) {
@@ -39,7 +37,7 @@ func (r *rpc) Add(_ context.Context, req *connect.Request[metricsV1.AddRequest])
 	case *prometheus.GaugeVec:
 		gv, err := vecMetric(r, c, m)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		gv.Add(m.GetValue())
 	case prometheus.Counter:
@@ -47,25 +45,25 @@ func (r *rpc) Add(_ context.Context, req *connect.Request[metricsV1.AddRequest])
 	case *prometheus.CounterVec:
 		cv, err := vecMetric(r, c, m)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		cv.Add(m.GetValue())
 	default:
-		return nil, connect.NewError(connect.CodeFailedPrecondition,
-			fmt.Errorf("%w: %s does not support Add", errUnsupportedOpForCol, m.GetName()))
+		return fmt.Errorf("%w: %s does not support Add", errUnsupportedOpForCol, m.GetName())
 	}
 
 	r.log.Debug("metric successfully added", "name", m.GetName(), "labels", m.GetLabels(), "value", m.GetValue())
-	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
+	out.Ok = true
+	return nil
 }
 
-func (r *rpc) Sub(_ context.Context, req *connect.Request[metricsV1.SubRequest]) (*connect.Response[metricsV1.Response], error) {
-	m := req.Msg.GetMetric()
+func (r *rpc) Sub(in *metricsV1.SubRequest, out *metricsV1.Response) error {
+	m := in.GetMetric()
 	r.log.Debug("subtracting value from metric", "name", m.GetName(), "value", m.GetValue(), "labels", m.GetLabels())
 
-	col, code, err := r.lookupCollector(m.GetName())
+	col, err := r.lookupCollector(m.GetName())
 	if err != nil {
-		return nil, connect.NewError(code, err)
+		return err
 	}
 
 	switch c := col.(type) {
@@ -74,25 +72,25 @@ func (r *rpc) Sub(_ context.Context, req *connect.Request[metricsV1.SubRequest])
 	case *prometheus.GaugeVec:
 		gv, err := vecMetric(r, c, m)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		gv.Sub(m.GetValue())
 	default:
-		return nil, connect.NewError(connect.CodeFailedPrecondition,
-			fmt.Errorf("%w: %s does not support Sub", errUnsupportedOpForCol, m.GetName()))
+		return fmt.Errorf("%w: %s does not support Sub", errUnsupportedOpForCol, m.GetName())
 	}
 
 	r.log.Debug("subtracting operation finished successfully", "name", m.GetName(), "labels", m.GetLabels(), "value", m.GetValue())
-	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
+	out.Ok = true
+	return nil
 }
 
-func (r *rpc) Observe(_ context.Context, req *connect.Request[metricsV1.ObserveRequest]) (*connect.Response[metricsV1.Response], error) {
-	m := req.Msg.GetMetric()
+func (r *rpc) Observe(in *metricsV1.ObserveRequest, out *metricsV1.Response) error {
+	m := in.GetMetric()
 	r.log.Debug("observing metric", "name", m.GetName(), "value", m.GetValue(), "labels", m.GetLabels())
 
-	col, code, err := r.lookupCollector(m.GetName())
+	col, err := r.lookupCollector(m.GetName())
 	if err != nil {
-		return nil, connect.NewError(code, err)
+		return err
 	}
 
 	switch c := col.(type) {
@@ -105,31 +103,31 @@ func (r *rpc) Observe(_ context.Context, req *connect.Request[metricsV1.ObserveR
 	case *prometheus.HistogramVec:
 		ov, err := vecMetric[prometheus.Observer](r, c, m)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		ov.Observe(m.GetValue())
 	case *prometheus.SummaryVec:
 		ov, err := vecMetric[prometheus.Observer](r, c, m)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		ov.Observe(m.GetValue())
 	default:
-		return nil, connect.NewError(connect.CodeFailedPrecondition,
-			fmt.Errorf("%w: %s does not support Observe", errUnsupportedOpForCol, m.GetName()))
+		return fmt.Errorf("%w: %s does not support Observe", errUnsupportedOpForCol, m.GetName())
 	}
 
 	r.log.Debug("observe operation finished successfully", "name", m.GetName(), "labels", m.GetLabels(), "value", m.GetValue())
-	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
+	out.Ok = true
+	return nil
 }
 
-func (r *rpc) Set(_ context.Context, req *connect.Request[metricsV1.SetRequest]) (*connect.Response[metricsV1.Response], error) {
-	m := req.Msg.GetMetric()
+func (r *rpc) Set(in *metricsV1.SetRequest, out *metricsV1.Response) error {
+	m := in.GetMetric()
 	r.log.Debug("setting metric", "name", m.GetName(), "value", m.GetValue(), "labels", m.GetLabels())
 
-	col, code, err := r.lookupCollector(m.GetName())
+	col, err := r.lookupCollector(m.GetName())
 	if err != nil {
-		return nil, connect.NewError(code, err)
+		return err
 	}
 
 	switch c := col.(type) {
@@ -138,80 +136,84 @@ func (r *rpc) Set(_ context.Context, req *connect.Request[metricsV1.SetRequest])
 	case *prometheus.GaugeVec:
 		gv, err := vecMetric(r, c, m)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		gv.Set(m.GetValue())
 	default:
-		return nil, connect.NewError(connect.CodeFailedPrecondition,
-			fmt.Errorf("%w: %s does not support Set", errUnsupportedOpForCol, m.GetName()))
+		return fmt.Errorf("%w: %s does not support Set", errUnsupportedOpForCol, m.GetName())
 	}
 
 	r.log.Debug("set operation finished successfully", "name", m.GetName(), "labels", m.GetLabels(), "value", m.GetValue())
-	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
+	out.Ok = true
+	return nil
 }
 
-func (r *rpc) Declare(_ context.Context, req *connect.Request[metricsV1.DeclareRequest]) (*connect.Response[metricsV1.Response], error) {
+func (r *rpc) Declare(in *metricsV1.DeclareRequest, out *metricsV1.Response) error {
 	const op = rrerrors.Op("metrics_rpc_declare")
 
-	nc := req.Msg.GetCollector()
+	nc := in.GetCollector()
 	r.p.mu.Lock()
 	defer r.p.mu.Unlock()
 
 	r.log.Debug("declaring new metric", "name", nc.GetName(), "type", nc.GetCollector().GetType(), "namespace", nc.GetCollector().GetNamespace())
 	if _, exist := r.p.collectors.Load(nc.GetName()); exist {
 		r.log.Warn("metric with provided name already exist", "name", nc.GetName())
-		return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
+		out.Ok = true
+		return nil
 	}
 
 	promCol, err := buildPromCollector(nc)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, rrerrors.E(op, err))
+		return rrerrors.E(op, err)
 	}
 
 	if err := r.p.Register(promCol); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, rrerrors.E(op, err))
+		return rrerrors.E(op, err)
 	}
 
 	r.p.collectors.Store(nc.GetName(), &collector{col: promCol, registered: true})
 	r.log.Debug("metric successfully added", "name", nc.GetName(), "type", nc.GetCollector().GetType(), "namespace", nc.GetCollector().GetNamespace())
-	return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
+	out.Ok = true
+	return nil
 }
 
-func (r *rpc) Unregister(_ context.Context, req *connect.Request[metricsV1.UnregisterRequest]) (*connect.Response[metricsV1.Response], error) {
-	name := req.Msg.GetName()
+func (r *rpc) Unregister(in *metricsV1.UnregisterRequest, out *metricsV1.Response) error {
+	name := in.GetName()
 	r.log.Debug("unregistering collector", "name", name)
 
 	c, exist := r.p.collectors.LoadAndDelete(name)
 	if !exist || c == nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("%w: %s", errUndefinedCollector, name))
+		return fmt.Errorf("%w: %s", errUndefinedCollector, name)
 	}
 
 	col, ok := c.(*collector)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("collectors map held non-*collector for %s", name))
+		return fmt.Errorf("collectors map held non-*collector for %s", name)
 	}
 	if r.p.registry.Unregister(col.col) {
 		r.log.Debug("collector was successfully unregistered", "name", name)
-		return connect.NewResponse(&metricsV1.Response{Ok: true}), nil
+		out.Ok = true
+		return nil
 	}
 	// Preserves legacy contract: prometheus refused to unregister (already
 	// gone, or never registered there). The collector is removed from our map
 	// either way, but the caller deserves to know prometheus state diverged.
 	r.log.Debug("collector was deleted from the RR registry but not from the prometheus collector", "name", name)
-	return connect.NewResponse(&metricsV1.Response{Ok: false}), nil
+	out.Ok = false
+	return nil
 }
 
-func (r *rpc) lookupCollector(name string) (prometheus.Collector, connect.Code, error) {
+func (r *rpc) lookupCollector(name string) (prometheus.Collector, error) {
 	c, exist := r.p.collectors.Load(name)
 	if !exist || c == nil {
 		r.log.Error("undefined collector", "collector", name)
-		return nil, connect.CodeNotFound, fmt.Errorf("%w: %s", errUndefinedCollector, name)
+		return nil, fmt.Errorf("%w: %s", errUndefinedCollector, name)
 	}
 	col, ok := c.(*collector)
 	if !ok {
-		return nil, connect.CodeInternal, fmt.Errorf("collectors map held non-*collector for %s", name)
+		return nil, fmt.Errorf("collectors map held non-*collector for %s", name)
 	}
-	return col.col, 0, nil
+	return col.col, nil
 }
 
 func vecMetric[V any, T interface {
@@ -220,13 +222,12 @@ func vecMetric[V any, T interface {
 	var zero V
 	if len(m.GetLabels()) == 0 {
 		r.log.Error("required labels for collector", "collector", m.GetName())
-		return zero, connect.NewError(connect.CodeInvalidArgument,
-			fmt.Errorf("%w: %s", errRequiredLabels, m.GetName()))
+		return zero, fmt.Errorf("%w: %s", errRequiredLabels, m.GetName())
 	}
 	v, err := c.GetMetricWithLabelValues(m.GetLabels()...)
 	if err != nil {
 		r.log.Error("failed to get metrics with label values", "collector", m.GetName(), "labels", m.GetLabels())
-		return zero, connect.NewError(connect.CodeInvalidArgument, err)
+		return zero, err
 	}
 	return v, nil
 }
