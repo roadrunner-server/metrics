@@ -10,7 +10,7 @@ require (
 	github.com/roadrunner-server/config/v6 v6.0.0-beta.3
 	github.com/roadrunner-server/endure/v2 v2.6.2
 	github.com/roadrunner-server/goridge/v4 v4.0.0-beta.2.0.20260714195909-75e9ece43063
-	github.com/roadrunner-server/http/v6 v6.0.0-beta.7
+	github.com/roadrunner-server/http/v6 v6.0.0-beta.7.0.20260714202301-3d2c74eb5e61
 	github.com/roadrunner-server/logger/v6 v6.0.0-beta.3
 	github.com/roadrunner-server/metrics/v6 v6.0.0
 	github.com/roadrunner-server/prometheus/v6 v6.0.0-beta.2
@@ -30,7 +30,6 @@ require (
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
