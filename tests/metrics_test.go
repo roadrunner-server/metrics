@@ -699,7 +699,7 @@ func observeMetricNotEnoughLabels(address string) func(t *testing.T) {
 
 		var observeResp metricsV1.Response
 		err = client.Call("metrics.Observe", &metricsV1.ObserveRequest{
-			Metric: &metricsV1.Metric{Name: "observe_observeMetric", Value: 100.0, Labels: []string{"test"}},
+			Metric: &metricsV1.Metric{Name: "observe_observeMetricNotEnoughLabels", Value: 100.0, Labels: []string{"test"}},
 		}, &observeResp)
 		assert.Error(t, err)
 	}
@@ -881,7 +881,7 @@ func setOnHistogram(address string) func(t *testing.T) {
 		// Histogram does not support Set — must surface as an error.
 		var setResp metricsV1.Response
 		err = client.Call("metrics.Set", &metricsV1.SetRequest{
-			Metric: &metricsV1.Metric{Name: "gauge_setOnHistogram", Value: 100.0},
+			Metric: &metricsV1.Metric{Name: "histogram_setOnHistogram", Value: 100.0},
 		}, &setResp)
 		assert.Error(t, err)
 	}

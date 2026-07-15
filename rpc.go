@@ -15,6 +15,7 @@ var (
 	errRequiredLabels      = errors.New("required labels for collector")
 	errUnsupportedOpForCol = errors.New("collector does not support the requested operation")
 	errUnknownCollectorTyp = errors.New("unknown collector type")
+	errNegativeCounter     = errors.New("counter cannot decrease in value")
 )
 
 type rpc struct {
@@ -41,8 +42,14 @@ func (r *rpc) Add(in *metricsV1.AddRequest, out *metricsV1.Response) error {
 		}
 		gv.Add(m.GetValue())
 	case prometheus.Counter:
+		if m.GetValue() < 0 {
+			return fmt.Errorf("%w: %s", errNegativeCounter, m.GetName())
+		}
 		c.Add(m.GetValue())
 	case *prometheus.CounterVec:
+		if m.GetValue() < 0 {
+			return fmt.Errorf("%w: %s", errNegativeCounter, m.GetName())
+		}
 		cv, err := vecMetric(r, c, m)
 		if err != nil {
 			return err
