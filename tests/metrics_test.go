@@ -33,7 +33,11 @@ import (
 func newMetricsClient(t *testing.T, address string) *rpc.Client {
 	conn, err := (&net.Dialer{}).DialContext(t.Context(), "tcp", address)
 	require.NoError(t, err)
-	return rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
+	client := rpc.NewClientWithCodec(goridgeRpc.NewClientCodec(conn))
+	t.Cleanup(func() {
+		_ = client.Close()
+	})
+	return client
 }
 
 func toProtoCollector(nc metrics.NamedCollector) *metricsV1.NamedCollector {
