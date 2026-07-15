@@ -6,15 +6,15 @@ toolchain go1.26.4
 
 require (
 	github.com/prometheus/client_golang v1.23.2
-	github.com/roadrunner-server/api-go/v6 v6.0.0-beta.12.0.20260714200341-93604e5012d4
+	github.com/roadrunner-server/api-go/v6 v6.0.0-beta.13
 	github.com/roadrunner-server/config/v6 v6.0.0-beta.3
 	github.com/roadrunner-server/endure/v2 v2.6.2
-	github.com/roadrunner-server/goridge/v4 v4.0.0-beta.2.0.20260714195909-75e9ece43063
+	github.com/roadrunner-server/goridge/v4 v4.0.0-beta.3
 	github.com/roadrunner-server/http/v6 v6.0.0-beta.7.0.20260714202301-3d2c74eb5e61
 	github.com/roadrunner-server/logger/v6 v6.0.0-beta.3
 	github.com/roadrunner-server/metrics/v6 v6.0.0
 	github.com/roadrunner-server/prometheus/v6 v6.0.0-beta.2
-	github.com/roadrunner-server/rpc/v6 v6.0.0-beta.4.0.20260714200548-15b82bc47898
+	github.com/roadrunner-server/rpc/v6 v6.0.0-beta.5
 	github.com/roadrunner-server/server/v6 v6.0.0-beta.6
 	github.com/stretchr/testify v1.11.1
 )
@@ -47,7 +47,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.4.2 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.69.0 // indirect
+	github.com/prometheus/common v0.70.0 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.60.0 // indirect
@@ -83,7 +83,7 @@ require (
 	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
 	golang.org/x/tools v0.47.0 // indirect
 	google.golang.org/genproto v0.0.0-20260630182238-925bb5da69e7 // indirect
