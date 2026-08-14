@@ -6,7 +6,6 @@ toolchain go1.26.5
 
 require (
 	github.com/prometheus/client_golang v1.24.1
-	github.com/roadrunner-server/api-go/v6 v6.0.0-beta.13
 	github.com/roadrunner-server/endure/v2 v2.6.2
 	github.com/roadrunner-server/errors v1.5.0
 	github.com/stretchr/testify v1.11.1

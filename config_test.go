@@ -1,87 +1,93 @@
 package metrics
 
 import (
-	"bytes"
-	"encoding/json"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func Test_Config_Hydrate_Error1(t *testing.T) {
-	cfg := `{"request": {"From": "Something"}}`
-	c := &Config{}
-	f := new(bytes.Buffer)
-	f.WriteString(cfg)
+func TestConfigCollectorTypes(t *testing.T) {
+	tests := []struct {
+		name       string
+		collector  Collector
+		wantScalar prometheus.Collector
+		wantVec    prometheus.Collector
+	}{
+		{
+			name:       "gauge",
+			collector:  Collector{Type: Gauge},
+			wantScalar: prometheus.NewGauge(prometheus.GaugeOpts{}),
+			wantVec:    prometheus.NewGaugeVec(prometheus.GaugeOpts{}, []string{}),
+		},
+		{
+			name:       "counter",
+			collector:  Collector{Type: Counter},
+			wantScalar: prometheus.NewCounter(prometheus.CounterOpts{}),
+			wantVec:    prometheus.NewCounterVec(prometheus.CounterOpts{}, []string{}),
+		},
+		{
+			name:       "summary",
+			collector:  Collector{Type: Summary, Objectives: map[float64]float64{0.5: 0.05}},
+			wantScalar: prometheus.NewSummary(prometheus.SummaryOpts{Objectives: map[float64]float64{0.5: 0.05}}),
+			wantVec:    prometheus.NewSummaryVec(prometheus.SummaryOpts{}, []string{}),
+		},
+		{
+			name:       "histogram",
+			collector:  Collector{Type: Histogram, Buckets: []float64{0.1, 0.2}},
+			wantScalar: prometheus.NewHistogram(prometheus.HistogramOpts{}),
+			wantVec:    prometheus.NewHistogramVec(prometheus.HistogramOpts{}, []string{}),
+		},
+	}
 
-	err := json.Unmarshal(f.Bytes(), &c)
-	if err != nil {
-		t.Fatal(err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scalar := tt.collector
+			scalar.Namespace = "app"
+			scalar.Subsystem = "sub"
+			scalar.Help = "help"
+
+			cfg := &Config{Collect: map[string]Collector{"metric": scalar}}
+			built, err := cfg.getCollectors()
+			require.NoError(t, err)
+			assert.IsType(t, tt.wantScalar, built["metric"].col)
+			assert.False(t, built["metric"].registered)
+
+			vec := scalar
+			vec.Labels = []string{"label"}
+
+			cfg = &Config{Collect: map[string]Collector{"metric": vec}}
+			built, err = cfg.getCollectors()
+			require.NoError(t, err)
+			assert.IsType(t, tt.wantVec, built["metric"].col)
+		})
 	}
 }
 
-func Test_Config_Hydrate_Error2(t *testing.T) {
-	cfg := `{"dir": "/dir/"`
-	c := &Config{}
+func TestConfigCollectorUnknownType(t *testing.T) {
+	cfg := &Config{Collect: map[string]Collector{"metric": {Type: "gaugee"}}}
 
-	f := new(bytes.Buffer)
-	f.WriteString(cfg)
-
-	err := json.Unmarshal(f.Bytes(), &c)
-	assert.Error(t, err)
+	built, err := cfg.getCollectors()
+	require.Error(t, err)
+	assert.Nil(t, built)
+	assert.EqualError(t, err, "invalid metric type `gaugee` for `metric`")
 }
 
-func Test_Config_Metrics(t *testing.T) {
-	cfg := `{
-"collect":{
-	"metric1":{"type": "gauge"},
-	"metric2":{	"type": "counter"},
-	"metric3":{"type": "summary"},
-	"metric4":{"type": "histogram"}
-}
-}`
-	c := &Config{}
-	f := new(bytes.Buffer)
-	f.WriteString(cfg)
+func TestConfigNoCollectors(t *testing.T) {
+	cfg := &Config{}
 
-	err := json.Unmarshal(f.Bytes(), &c)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	m, err := c.getCollectors()
-	assert.NoError(t, err)
-
-	assert.IsType(t, prometheus.NewGauge(prometheus.GaugeOpts{}), m["metric1"].col)
-	assert.IsType(t, prometheus.NewCounter(prometheus.CounterOpts{}), m["metric2"].col)
-	assert.IsType(t, prometheus.NewSummary(prometheus.SummaryOpts{}), m["metric3"].col)
-	assert.IsType(t, prometheus.NewHistogram(prometheus.HistogramOpts{}), m["metric4"].col)
+	built, err := cfg.getCollectors()
+	require.NoError(t, err)
+	assert.Nil(t, built)
 }
 
-func Test_Config_MetricsVector(t *testing.T) {
-	cfg := `{
-"collect":{
-	"metric1":{"type": "gauge","labels":["label"]},
-	"metric2":{	"type": "counter","labels":["label"]},
-	"metric3":{"type": "summary","labels":["label"]},
-	"metric4":{"type": "histogram","labels":["label"]}
-}
-}`
-	c := &Config{}
-	f := new(bytes.Buffer)
-	f.WriteString(cfg)
+func TestConfigInitDefaults(t *testing.T) {
+	cfg := &Config{}
+	cfg.InitDefaults()
+	assert.Equal(t, "127.0.0.1:2112", cfg.Address)
 
-	err := json.Unmarshal(f.Bytes(), &c)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	m, err := c.getCollectors()
-	assert.NoError(t, err)
-
-	assert.IsType(t, prometheus.NewGaugeVec(prometheus.GaugeOpts{}, []string{}), m["metric1"].col)
-	assert.IsType(t, prometheus.NewCounterVec(prometheus.CounterOpts{}, []string{}), m["metric2"].col)
-	assert.IsType(t, prometheus.NewSummaryVec(prometheus.SummaryOpts{}, []string{}), m["metric3"].col)
-	assert.IsType(t, prometheus.NewHistogramVec(prometheus.HistogramOpts{}, []string{}), m["metric4"].col)
+	configured := &Config{Address: "127.0.0.1:9999"}
+	configured.InitDefaults()
+	assert.Equal(t, "127.0.0.1:9999", configured.Address)
 }
