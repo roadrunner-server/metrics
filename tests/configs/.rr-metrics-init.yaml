@@ -1,7 +1,7 @@
 version: '3'
 
 rpc:
-  listen: tcp://127.0.0.1:6001
+  listen: tcp://127.0.0.1:6351
 
 metrics:
   # prometheus client address (path /metrics added automatically)

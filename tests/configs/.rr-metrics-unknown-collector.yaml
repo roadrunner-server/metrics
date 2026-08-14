@@ -1,0 +1,11 @@
+version: '3'
+
+metrics:
+  collect:
+    app_metric:
+      type: gaugee
+      help: "Custom application metric"
+
+logs:
+  mode: development
+  level: error
