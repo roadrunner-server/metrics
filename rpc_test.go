@@ -147,7 +147,7 @@ func TestRPCDeclareUnknownType(t *testing.T) {
 	r := newTestRPC()
 
 	var ok bool
-	err := r.Declare(&NamedCollector{Name: "bad", Collector: Collector{Type: "gaugee"}}, &ok)
+	err := r.Declare(&NamedCollector{Name: "bad", Type: "gaugee"}, &ok)
 	require.ErrorContains(t, err, errUnknownCollectorTyp.Error())
 
 	_, exists := r.p.collectors.Load("bad")
@@ -157,11 +157,11 @@ func TestRPCDeclareUnknownType(t *testing.T) {
 func TestRPCDeclareExistingName(t *testing.T) {
 	r := newTestRPC()
 
-	declare(t, r, NamedCollector{Name: "same", Collector: Collector{Type: Counter}})
+	declare(t, r, NamedCollector{Name: "same", Type: Counter})
 	first, _ := r.p.collectors.Load("same")
 
 	// a repeated declaration reports success and keeps the collector in place
-	declare(t, r, NamedCollector{Name: "same", Collector: Collector{Type: Gauge}})
+	declare(t, r, NamedCollector{Name: "same", Type: Gauge})
 	second, _ := r.p.collectors.Load("same")
 	assert.Same(t, first, second)
 }
@@ -172,7 +172,7 @@ func TestRPCDeclareRegistryConflict(t *testing.T) {
 
 	// the plugin map is free but prometheus already knows the metric name
 	var ok bool
-	err := r.Declare(&NamedCollector{Name: "taken", Collector: Collector{Type: Counter}}, &ok)
+	err := r.Declare(&NamedCollector{Name: "taken", Type: Counter}, &ok)
 	require.ErrorContains(t, err, "duplicate metrics collector registration attempted")
 
 	_, exists := r.p.collectors.Load("taken")
@@ -181,10 +181,10 @@ func TestRPCDeclareRegistryConflict(t *testing.T) {
 
 func TestRPCAdd(t *testing.T) {
 	r := newTestRPC()
-	declare(t, r, NamedCollector{Name: "gauge", Collector: Collector{Type: Gauge}})
-	declare(t, r, NamedCollector{Name: "counter", Collector: Collector{Type: Counter}})
-	declare(t, r, NamedCollector{Name: "gauge_vec", Collector: Collector{Type: Gauge, Labels: []string{"label"}}})
-	declare(t, r, NamedCollector{Name: "counter_vec", Collector: Collector{Type: Counter, Labels: []string{"label"}}})
+	declare(t, r, NamedCollector{Name: "gauge", Type: Gauge})
+	declare(t, r, NamedCollector{Name: "counter", Type: Counter})
+	declare(t, r, NamedCollector{Name: "gauge_vec", Type: Gauge, Labels: []string{"label"}})
+	declare(t, r, NamedCollector{Name: "counter_vec", Type: Counter, Labels: []string{"label"}})
 
 	var ok bool
 	require.NoError(t, r.Add(&Metric{Name: "gauge", Value: 7}, &ok))
@@ -202,8 +202,8 @@ func TestRPCAdd(t *testing.T) {
 
 func TestRPCAddNegativeOnCounter(t *testing.T) {
 	r := newTestRPC()
-	declare(t, r, NamedCollector{Name: "counter", Collector: Collector{Type: Counter}})
-	declare(t, r, NamedCollector{Name: "counter_vec", Collector: Collector{Type: Counter, Labels: []string{"label"}}})
+	declare(t, r, NamedCollector{Name: "counter", Type: Counter})
+	declare(t, r, NamedCollector{Name: "counter_vec", Type: Counter, Labels: []string{"label"}})
 
 	var ok bool
 	require.ErrorIs(t, r.Add(&Metric{Name: "counter", Value: -1}, &ok), errNegativeCounter)
@@ -215,8 +215,8 @@ func TestRPCAddNegativeOnCounter(t *testing.T) {
 
 func TestRPCSub(t *testing.T) {
 	r := newTestRPC()
-	declare(t, r, NamedCollector{Name: "gauge", Collector: Collector{Type: Gauge}})
-	declare(t, r, NamedCollector{Name: "gauge_vec", Collector: Collector{Type: Gauge, Labels: []string{"label"}}})
+	declare(t, r, NamedCollector{Name: "gauge", Type: Gauge})
+	declare(t, r, NamedCollector{Name: "gauge_vec", Type: Gauge, Labels: []string{"label"}})
 
 	var ok bool
 	require.NoError(t, r.Add(&Metric{Name: "gauge", Value: 10}, &ok))
@@ -231,8 +231,8 @@ func TestRPCSub(t *testing.T) {
 
 func TestRPCSet(t *testing.T) {
 	r := newTestRPC()
-	declare(t, r, NamedCollector{Name: "gauge", Collector: Collector{Type: Gauge}})
-	declare(t, r, NamedCollector{Name: "gauge_vec", Collector: Collector{Type: Gauge, Labels: []string{"label"}}})
+	declare(t, r, NamedCollector{Name: "gauge", Type: Gauge})
+	declare(t, r, NamedCollector{Name: "gauge_vec", Type: Gauge, Labels: []string{"label"}})
 
 	var ok bool
 	require.NoError(t, r.Set(&Metric{Name: "gauge", Value: 42}, &ok))
@@ -245,9 +245,9 @@ func TestRPCSet(t *testing.T) {
 
 func TestRPCObserve(t *testing.T) {
 	r := newTestRPC()
-	declare(t, r, NamedCollector{Name: "histogram", Collector: Collector{Type: Histogram, Buckets: []float64{1}}})
-	declare(t, r, NamedCollector{Name: "histogram_vec", Collector: Collector{Type: Histogram, Buckets: []float64{1}, Labels: []string{"label"}}})
-	declare(t, r, NamedCollector{Name: "summary_vec", Collector: Collector{Type: Summary, Labels: []string{"label"}}})
+	declare(t, r, NamedCollector{Name: "histogram", Type: Histogram, Buckets: []float64{1}})
+	declare(t, r, NamedCollector{Name: "histogram_vec", Type: Histogram, Buckets: []float64{1}, Labels: []string{"label"}})
+	declare(t, r, NamedCollector{Name: "summary_vec", Type: Summary, Labels: []string{"label"}})
 
 	var ok bool
 	require.NoError(t, r.Observe(&Metric{Name: "histogram", Value: 0.5}, &ok))
@@ -262,7 +262,7 @@ func TestRPCObserve(t *testing.T) {
 
 func TestRPCObserveScalarSummary(t *testing.T) {
 	r := newTestRPC()
-	declare(t, r, NamedCollector{Name: "summary", Collector: Collector{Type: Summary}})
+	declare(t, r, NamedCollector{Name: "summary", Type: Summary})
 
 	// prometheus.Summary and prometheus.Histogram have the same method set, so a
 	// scalar summary is observed through the histogram arm of the type switch
@@ -274,9 +274,9 @@ func TestRPCObserveScalarSummary(t *testing.T) {
 
 func TestRPCUnsupportedOperations(t *testing.T) {
 	r := newTestRPC()
-	declare(t, r, NamedCollector{Name: "gauge", Collector: Collector{Type: Gauge}})
-	declare(t, r, NamedCollector{Name: "counter", Collector: Collector{Type: Counter}})
-	declare(t, r, NamedCollector{Name: "histogram", Collector: Collector{Type: Histogram, Buckets: []float64{1}}})
+	declare(t, r, NamedCollector{Name: "gauge", Type: Gauge})
+	declare(t, r, NamedCollector{Name: "counter", Type: Counter})
+	declare(t, r, NamedCollector{Name: "histogram", Type: Histogram, Buckets: []float64{1}})
 
 	var ok bool
 	require.ErrorIs(t, r.Add(&Metric{Name: "histogram", Value: 1}, &ok), errUnsupportedOpForCol)
@@ -287,10 +287,10 @@ func TestRPCUnsupportedOperations(t *testing.T) {
 
 func TestRPCVecCollectorsNeedLabels(t *testing.T) {
 	r := newTestRPC()
-	declare(t, r, NamedCollector{Name: "gauge_vec", Collector: Collector{Type: Gauge, Labels: []string{"first", "second"}}})
-	declare(t, r, NamedCollector{Name: "counter_vec", Collector: Collector{Type: Counter, Labels: []string{"first", "second"}}})
-	declare(t, r, NamedCollector{Name: "histogram_vec", Collector: Collector{Type: Histogram, Labels: []string{"first", "second"}}})
-	declare(t, r, NamedCollector{Name: "summary_vec", Collector: Collector{Type: Summary, Labels: []string{"first", "second"}}})
+	declare(t, r, NamedCollector{Name: "gauge_vec", Type: Gauge, Labels: []string{"first", "second"}})
+	declare(t, r, NamedCollector{Name: "counter_vec", Type: Counter, Labels: []string{"first", "second"}})
+	declare(t, r, NamedCollector{Name: "histogram_vec", Type: Histogram, Labels: []string{"first", "second"}})
+	declare(t, r, NamedCollector{Name: "summary_vec", Type: Summary, Labels: []string{"first", "second"}})
 
 	var ok bool
 	require.ErrorIs(t, r.Add(&Metric{Name: "gauge_vec", Value: 1}, &ok), errRequiredLabels)
@@ -337,7 +337,7 @@ func TestRPCForeignCollectorEntry(t *testing.T) {
 
 func TestRPCUnregister(t *testing.T) {
 	r := newTestRPC()
-	declare(t, r, NamedCollector{Name: "gone", Collector: Collector{Type: Counter}})
+	declare(t, r, NamedCollector{Name: "gone", Type: Counter})
 
 	var ok bool
 	require.NoError(t, r.Unregister("gone", &ok))
@@ -362,7 +362,7 @@ func TestRPCUnregisterUnknownToPrometheus(t *testing.T) {
 }
 
 func TestBuildPromCollectorUnknownType(t *testing.T) {
-	col, err := buildPromCollector(&NamedCollector{Name: "bad", Collector: Collector{Type: "gaugee"}})
+	col, err := buildPromCollector(&NamedCollector{Name: "bad", Type: "gaugee"})
 	require.Error(t, err)
 	assert.Nil(t, col)
 	assert.True(t, errors.Is(err, errUnknownCollectorTyp))
@@ -378,7 +378,7 @@ func TestRPCLogsThroughPluginLogger(t *testing.T) {
 	require.True(t, isRPC)
 
 	var ok bool
-	require.NoError(t, r.Declare(&NamedCollector{Name: "logged", Collector: Collector{Type: Counter}}, &ok))
+	require.NoError(t, r.Declare(&NamedCollector{Name: "logged", Type: Counter}, &ok))
 
 	// the service writes through the logger the plugin holds, not a default one
 	assert.Contains(t, buf.String(), "declaring new metric")
