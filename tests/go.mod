@@ -6,7 +6,7 @@ toolchain go1.27.0
 
 require (
 	github.com/prometheus/client_golang v1.24.1
-	github.com/roadrunner-server/config/v6 v6.0.0-beta.3
+	github.com/roadrunner-server/config/v6 v6.0.0-beta.4
 	github.com/roadrunner-server/endure/v2 v2.6.2
 	github.com/roadrunner-server/goridge/v4 v4.0.0-beta.3
 	github.com/roadrunner-server/http/v6 v6.0.0-beta.9
