@@ -1,10 +1,6 @@
 package metrics
 
-import (
-	"fmt"
-
-	"github.com/prometheus/client_golang/prometheus"
-)
+import "fmt"
 
 // Config configures metrics service.
 type Config struct {
@@ -62,63 +58,8 @@ func (c *Config) getCollectors() (map[string]*collector, error) {
 	collectors := make(map[string]*collector)
 
 	for name, m := range c.Collect {
-		var promCol prometheus.Collector
-		switch m.Type {
-		case Histogram:
-			opts := prometheus.HistogramOpts{
-				Name:      name,
-				Namespace: m.Namespace,
-				Subsystem: m.Subsystem,
-				Help:      m.Help,
-				Buckets:   m.Buckets,
-			}
-
-			if len(m.Labels) != 0 {
-				promCol = prometheus.NewHistogramVec(opts, m.Labels)
-			} else {
-				promCol = prometheus.NewHistogram(opts)
-			}
-		case Gauge:
-			opts := prometheus.GaugeOpts{
-				Name:      name,
-				Namespace: m.Namespace,
-				Subsystem: m.Subsystem,
-				Help:      m.Help,
-			}
-
-			if len(m.Labels) != 0 {
-				promCol = prometheus.NewGaugeVec(opts, m.Labels)
-			} else {
-				promCol = prometheus.NewGauge(opts)
-			}
-		case Counter:
-			opts := prometheus.CounterOpts{
-				Name:      name,
-				Namespace: m.Namespace,
-				Subsystem: m.Subsystem,
-				Help:      m.Help,
-			}
-
-			if len(m.Labels) != 0 {
-				promCol = prometheus.NewCounterVec(opts, m.Labels)
-			} else {
-				promCol = prometheus.NewCounter(opts)
-			}
-		case Summary:
-			opts := prometheus.SummaryOpts{
-				Name:       name,
-				Namespace:  m.Namespace,
-				Subsystem:  m.Subsystem,
-				Help:       m.Help,
-				Objectives: m.Objectives,
-			}
-
-			if len(m.Labels) != 0 {
-				promCol = prometheus.NewSummaryVec(opts, m.Labels)
-			} else {
-				promCol = prometheus.NewSummary(opts)
-			}
-		default:
+		promCol, err := buildPromCollector(&NamedCollector{Name: name, Collector: m})
+		if err != nil {
 			return nil, fmt.Errorf("invalid metric type `%s` for `%s`", m.Type, name)
 		}
 
