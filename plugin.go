@@ -111,9 +111,10 @@ func (p *Plugin) Serve() chan error {
 	defer p.mu.Unlock()
 
 	// register Collected stat providers
+	reg := p.cfg.builtinRegisterer(p.registry)
 	for _, sp := range p.statProviders {
 		for _, c := range sp.MetricsCollector() {
-			err := p.registry.Register(c)
+			err := reg.Register(c)
 			if err != nil {
 				errCh <- err
 				return errCh

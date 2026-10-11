@@ -1,0 +1,18 @@
+version: '3'
+
+rpc:
+  listen: tcp://127.0.0.1:6354
+
+metrics:
+  # prometheus client address (path /metrics added automatically)
+  address: "[::1]:2118"
+  prefix: "myapp_"
+  labels:
+    service: "test"
+  collect:
+    app_metric_counter:
+      type: counter
+      help: "Custom application counter."
+logs:
+  mode: development
+  level: error

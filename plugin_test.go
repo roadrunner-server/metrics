@@ -51,6 +51,17 @@ func (g *gaugeProvider) MetricsCollector() []prometheus.Collector {
 	return []prometheus.Collector{prometheus.NewGauge(prometheus.GaugeOpts{Name: g.name})}
 }
 
+// gaugeVecProvider is a StatProvider handing out a gauge vector with one
+// variable label and a single child whose label value is "1".
+type gaugeVecProvider struct{ name, label string }
+
+func (g *gaugeVecProvider) MetricsCollector() []prometheus.Collector {
+	vec := prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: g.name}, []string{g.label})
+	vec.WithLabelValues("1")
+
+	return []prometheus.Collector{vec}
+}
+
 // newTestPlugin returns a plugin with the state Init would have produced, minus
 // the config, so that tests can drive Serve and Stop directly.
 func newTestPlugin() *Plugin {
@@ -73,6 +84,31 @@ func gatheredNames(t *testing.T, reg *prometheus.Registry) []string {
 	}
 
 	return names
+}
+
+// gatheredLabels returns the labels of the first metric in the named family.
+func gatheredLabels(t *testing.T, reg *prometheus.Registry, name string) map[string]string {
+	t.Helper()
+
+	families, err := reg.Gather()
+	require.NoError(t, err)
+
+	for _, f := range families {
+		if f.GetName() != name {
+			continue
+		}
+
+		labels := map[string]string{}
+		for _, l := range f.GetMetric()[0].GetLabel() {
+			labels[l.GetName()] = l.GetValue()
+		}
+
+		return labels
+	}
+
+	t.Fatalf("metric family %q was not gathered", name)
+
+	return nil
 }
 
 func TestPluginInitWithoutSection(t *testing.T) {
@@ -148,6 +184,87 @@ func TestPluginServe(t *testing.T) {
 
 	require.NoError(t, p.Stop(t.Context()))
 	assert.Empty(t, errCh)
+}
+
+func TestPluginServeBuiltinPrefixAndLabels(t *testing.T) {
+	tests := []struct {
+		name       string
+		cfg        Config
+		provider   StatProvider
+		wantName   string
+		wantLabels map[string]string
+		wantErr    string
+	}{
+		{
+			name:       "no prefix and no labels",
+			provider:   &gaugeProvider{name: "provided"},
+			wantName:   "provided",
+			wantLabels: map[string]string{},
+		},
+		{
+			name:       "prefix",
+			cfg:        Config{Prefix: "myapp_"},
+			provider:   &gaugeProvider{name: "provided"},
+			wantName:   "myapp_provided",
+			wantLabels: map[string]string{},
+		},
+		{
+			name:       "labels",
+			cfg:        Config{Labels: map[string]string{"service": "api"}},
+			provider:   &gaugeProvider{name: "provided"},
+			wantName:   "provided",
+			wantLabels: map[string]string{"service": "api"},
+		},
+		{
+			name:       "prefix and labels",
+			cfg:        Config{Prefix: "myapp_", Labels: map[string]string{"service": "api"}},
+			provider:   &gaugeProvider{name: "provided"},
+			wantName:   "myapp_provided",
+			wantLabels: map[string]string{"service": "api"},
+		},
+		{
+			name:       "labels keep the variable labels of the provider",
+			cfg:        Config{Labels: map[string]string{"service": "api"}},
+			provider:   &gaugeVecProvider{name: "provided", label: "pid"},
+			wantName:   "provided",
+			wantLabels: map[string]string{"pid": "1", "service": "api"},
+		},
+		{
+			name:     "label name used by the provider",
+			cfg:      Config{Labels: map[string]string{"pid": "1"}},
+			provider: &gaugeVecProvider{name: "provided", label: "pid"},
+			wantErr:  `duplicate label names in constant and variable labels for metric "provided"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := newTestPlugin()
+			p.cfg = &tt.cfg
+			p.cfg.Address = "127.0.0.1:0"
+			p.statProviders = []StatProvider{tt.provider}
+			p.collectors.Store("configured", &collector{col: prometheus.NewCounter(prometheus.CounterOpts{Name: "configured"})})
+
+			errCh := p.Serve()
+			defer func() { require.NoError(t, p.Stop(t.Context())) }()
+
+			if tt.wantErr != "" {
+				select {
+				case err := <-errCh:
+					require.ErrorContains(t, err, tt.wantErr)
+				case <-time.After(time.Second):
+					t.Fatal("Serve did not report the registration error")
+				}
+
+				return
+			}
+
+			assert.Empty(t, errCh)
+			assert.Equal(t, tt.wantLabels, gatheredLabels(t, p.registry, tt.wantName))
+			// prefix and labels apply to stat providers only
+			assert.Empty(t, gatheredLabels(t, p.registry, "configured"))
+		})
+	}
 }
 
 func TestPluginServeStatProviderConflict(t *testing.T) {

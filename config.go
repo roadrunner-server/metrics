@@ -1,11 +1,19 @@
 package metrics
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/prometheus/client_golang/prometheus"
+)
 
 // Config configures metrics service.
 type Config struct {
 	// Address to listen
 	Address string `mapstructure:"address"`
+	// Prefix is prepended to the names of the metrics provided by other plugins.
+	Prefix string `mapstructure:"prefix"`
+	// Labels are added as constant labels to the metrics provided by other plugins.
+	Labels map[string]string `mapstructure:"labels"`
 	// Collect defines application-specific metrics.
 	Collect map[string]Collector `mapstructure:"collect"`
 }
@@ -67,6 +75,19 @@ func (c *Config) getCollectors() (map[string]*collector, error) {
 	}
 
 	return collectors, nil
+}
+
+// builtinRegisterer wraps reg so that the metrics provided by other plugins get the configured prefix and labels.
+func (c *Config) builtinRegisterer(reg prometheus.Registerer) prometheus.Registerer {
+	if c.Prefix != "" {
+		reg = prometheus.WrapRegistererWithPrefix(c.Prefix, reg)
+	}
+
+	if len(c.Labels) != 0 {
+		reg = prometheus.WrapRegistererWith(c.Labels, reg)
+	}
+
+	return reg
 }
 
 func (c *Config) InitDefaults() {
