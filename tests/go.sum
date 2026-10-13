@@ -102,8 +102,8 @@ github.com/roadrunner-server/pool/v2 v2.0.0-beta.1 h1:jpYXFtdD6QGAdAGPgMxrNi3j1C
 github.com/roadrunner-server/pool/v2 v2.0.0-beta.1/go.mod h1:Bo1wT7RtL3eyQHXBUohNhtj/yAmRt6Rq8smuBg5pWkY=
 github.com/roadrunner-server/prometheus/v6 v6.0.0-beta.3 h1:65ynsA6ZFPoMyR6I+oSUjjzqdxUv3pJefqccnx8Ayrc=
 github.com/roadrunner-server/prometheus/v6 v6.0.0-beta.3/go.mod h1:HCI+0AOAX/vfu8TLPNDTQj4eyySQrDpsrSDmtGuQC60=
-github.com/roadrunner-server/rpc/v6 v6.0.0-beta.6 h1:AMo1Xl2ihZnRwU0L6s/epcrc2ayuviaxD8toDa89Lr0=
-github.com/roadrunner-server/rpc/v6 v6.0.0-beta.6/go.mod h1:VhI4zwjYgSSJd2dKS7saM+LdRc9ycPv6NAmKHKSFySQ=
+github.com/roadrunner-server/rpc/v6 v6.0.0 h1:B63RuOl3Md+X8qooXXICBTSnNQNOkOvyuPQ/CU8QpI0=
+github.com/roadrunner-server/rpc/v6 v6.0.0/go.mod h1:8yuu2n1+3yzhUHkdq/VVdbzQI6SYsEergrCrxGchc+Q=
 github.com/roadrunner-server/server/v6 v6.0.0-beta.7 h1:EiRKdWFPOYLoYy53xoLbyU8854FQdmyTRSdtHRWoK2s=
 github.com/roadrunner-server/server/v6 v6.0.0-beta.7/go.mod h1:uq0yIZgp1v80BGIHPZHKHFyYIWTVJJvofThaC8QWf7w=
 github.com/roadrunner-server/tcplisten v1.6.0 h1:xfFeA2PZTmwJdwc/InhJGq200ew/lfTDReF3oa4AyI4=
