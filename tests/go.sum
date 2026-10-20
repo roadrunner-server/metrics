@@ -96,8 +96,8 @@ github.com/roadrunner-server/events v1.1.0 h1:kt0thyfOsSFHd5mS4tXYTOftrhDdYTN6el
 github.com/roadrunner-server/events v1.1.0/go.mod h1:gOdMYUPB0rozjaTeppbwnTw5XOQWAiMHsvRTj7CIGzI=
 github.com/roadrunner-server/goridge/v4 v4.0.0 h1:hyhDQggB8wYfT6tE3yso8lezOprz9BFrkjjzglAlG2Q=
 github.com/roadrunner-server/goridge/v4 v4.0.0/go.mod h1:ahS0+nR0wRB64a8ejYaBNIjks88zEMX04Ksg1tVm/Dk=
-github.com/roadrunner-server/http/v6 v6.0.0 h1:ZZnSzBTnC5NrnwQUEDY8NHuwYiiSm4VB4jjtXZ4j/yE=
-github.com/roadrunner-server/http/v6 v6.0.0/go.mod h1:7NwR+E4afyByC8ZoRV5Bs1pHE9FJURd+1cI6ZnbRnbc=
+github.com/roadrunner-server/http/v6 v6.1.0 h1:GOKBthnt9Xjaf5nImjJkexG2LBMzGWTff1Lwjz//6Jg=
+github.com/roadrunner-server/http/v6 v6.1.0/go.mod h1:2UDlY85Az1Oack3uE/KlCvxGmbI1upuxdriNzKeIBGY=
 github.com/roadrunner-server/logger/v6 v6.0.0 h1:Un2RXNVlr7LzJlg/loDHhZ0bgapEHmtC07ZRpSrj4QE=
 github.com/roadrunner-server/logger/v6 v6.0.0/go.mod h1:9XfvwsrAf+lwfdX7ODauGPUQt5cePgwdOUj5gDQ3UxU=
 github.com/roadrunner-server/pool/v2 v2.0.0 h1:rtxGvX6jt/WfSmNuV9zCOZ3NKdEGa/aTxpVPD14uHrU=
